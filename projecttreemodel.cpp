@@ -8,7 +8,7 @@ See LICENSE.TXT for licensing terms.
 
 #include "projecttreemodel.h"
 
-ProjectTreeModel::ProjectTreeModel( QObject *parent ):QFileSystemModel( parent ),_current(-1){
+ProjectTreeModel::ProjectTreeModel(QObject *parent ):QFileSystemModel( parent ),_current(-1){
 }
 
 bool ProjectTreeModel::addProject( const QString &dir ){
@@ -104,7 +104,7 @@ QVariant ProjectTreeModel::data( const QModelIndex &index,int role)const{
         {
             return QPixmap(":/icons/circle/tree/folder.png");
         }
-        if(type(index).endsWith("monkey File"))
+        if(type(index).endsWith("blitzmax File"))
         {
             return QPixmap(":/icons/circle/tree/monkey.png");
         }

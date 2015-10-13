@@ -30,7 +30,8 @@ public:
     static QString templateWord( const QString &key );
     static QString keyword( const QString &key );
     static void analyzeDir(const QString &path , const QStringList &exclude);
-    static bool analyzeFile(const QString &path , int kind=KIND_MONKEY);
+    static void analyzeMods();
+    static bool analyzeFile(const QString &path , int kind=KIND_BLITZMAX);
     static bool needCloseWithEnd( const QString &line );
     static QIcon identIcon( const QString &ident );
     //static void parseCodeItems(QString line , const QTextBlock &block);
@@ -45,7 +46,7 @@ public:
     static bool containsMonkey(const QString &ident );
     static bool containsUser(const QString &ident );
     static bool containsKeyword(const QString &ident );
-    static void clearMonkey();
+    static void clearBlitzMax();
     static QString toolTip(const QString &ident, const QTextBlock &block);
     static QString toolTip(CodeItem *itemAtBlock);
     static void removeUserFile(const QString &path);
@@ -80,7 +81,7 @@ public:
     static void setTabSize(int size, bool useSpaces);
 
     static const int KIND_USER = 0;
-    static const int KIND_MONKEY = 1;
+    static const int KIND_BLITZMAX = 1;
     static CodeAnalyzer* instance();
 
     static bool isSortByName() { return _isSortByName; }
@@ -137,7 +138,7 @@ private:
     static QListView* _listView;
 
     static QHash<QString, QString>* mapTemplates();
-    static QMap<QString,CodeItem*>* mapMonkey();
+    static QMap<QString,CodeItem*>* mapBlitzMax();
     static QHash<QString, CodeItem *> *mapUser();
     static QHash<QString, CodeItem *> *mapKeywords();
     static QHash<QString, CodeItem *> *mapRem();
@@ -225,9 +226,9 @@ public:
     bool isVar(){ return _isVar; }
     bool isParam(){ return _isParam; }
     bool isKeyword(){ return _isKeyword; }
-    bool isMonkey(){ return _isMonkey; }
+    bool isBlitzMax(){ return _isBlitzMax; }
     bool isUser(){ return _isUser; }
-    void setIsMonkey(bool value){ _isMonkey = value; }
+    void setIsBlitzMax(bool value){ _isBlitzMax = value; }
     void setIsUser(bool value){ _isUser = value; }
     CodeItem* child(const QString &ident, bool withBaseClasses=false);
     void setBlockEnd(const QTextBlock &block);
@@ -254,7 +255,7 @@ private:
     int _indent, _blockNumber, _blockEndNumber;
     bool _foldable;
     bool _isClass, _isFunc, _isField, _isVar, _isKeyword, _isParam, _isInherited, _isInterface;
-    bool _isMonkey, _isUser;
+    bool _isBlitzMax, _isUser;
     QHash<QString,ItemWithData*> _itemsWithData;
     QStringList _baseClasses, _templWords;
     QString _tempIdentType;
@@ -318,7 +319,7 @@ public:
 
 class UsagesResult {
 public:
-    UsagesResult(QTreeWidgetItem *treeitem, const QString &path, const QString &ident, int block, int start, int end) {
+    UsagesResult(QTreeWidgetItem *, const QString &path, const QString &ident, int block, int start, int end) {
         this->path = path;
         this->ident = ident;
         blockNumber = block;

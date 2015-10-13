@@ -55,20 +55,27 @@ void CodeAnalyzer::init() {
     _listView = 0;
     Prefs *p = Prefs::prefs();
     //set defaults
-    if(!p->contains("codeShowVariables"))
+    if (!p->contains("codeShowVariables")) {
         p->setValue("codeShowVariables",true);
-    if(!p->contains("codeShowInherited"))
+    }
+    if (!p->contains("codeShowInherited")) {
         p->setValue("codeShowInherited",false);
-    if(!p->contains("codeSort"))
+    }
+    if (!p->contains("codeSort")) {
         p->setValue("codeSort",true);
-    if(!p->contains("codeAutoformat"))
+    }
+    if (!p->contains("codeAutoformat")) {
         p->setValue("codeAutoformat",true);
-    if(!p->contains("codeFillAucompInherit"))
+    }
+    if (!p->contains("codeFillAucompInherit")) {
         p->setValue("codeFillAucompInherit",true);
-    if(!p->contains("tabSize"))
+    }
+    if (!p->contains("tabSize")) {
         p->setValue("tabSize",4);
-    if(!p->contains("codeTabUseSpaces"))
+    }
+    if (!p->contains("codeTabUseSpaces")) {
         p->setValue("codeTabUseSpaces",false);
+    }
     //read current
     _isShowVariables = p->getBool("codeShowVariables");
     _isShowInherited = p->getBool("codeShowInherited");
@@ -100,30 +107,31 @@ CodeAnalyzer* CodeAnalyzer::instance() {
 }
 
 void CodeAnalyzer::onPrefsChanged( const QString &name ) {
-    if(name != "tabSize" && !name.startsWith("code"))
-        return;
+    if(name != "tabSize" && !name.startsWith("code")) {
+        return;   
+    }
     Prefs *p = Prefs::prefs();
-    if(name == "codeShowVariables") {
+    if (name == "codeShowVariables") {
         _isShowVariables = p->getBool(name);
     }
-    else if(name == "codeShowInherited") {
+    else if (name == "codeShowInherited") {
         _isShowInherited = p->getBool(name);
     }
-    else if(name == "codeSort") {
+    else if (name == "codeSort") {
         _isSortByName = p->getBool(name);
     }
-    else if(name == "codeAutoformat") {
+    else if (name == "codeAutoformat") {
         _doAutoformat = p->getBool(name);
     }
-    else if(name == "tabSize") {
+    else if (name == "tabSize") {
         _tabSize = p->getInt(name);
         setTabSize(_tabSize, _tabUseSpaces);
     }
-    else if(name == "codeTabUseSpaces") {
+    else if (name == "codeTabUseSpaces") {
         bool b = p->getBool(name);
         setTabSize(_tabSize, b);
     }
-    else if(name == "codeFillAucompInherit") {
+    else if (name == "codeFillAucompInherit") {
         _isFillAucompWithInheritance = p->getBool("codeFillAucompInherit");
     }
     //qDebug()<<"CodeAnalyzer::onPrefsChanged"<<name;
@@ -139,11 +147,11 @@ void CodeAnalyzer::finalize() {
     mapTemplates()->clear();
     delete mapTemplates();
     //
-    foreach (CodeItem *i, mapMonkey()->values()) {
+    foreach (CodeItem *i, mapBlitzMax()->values()) {
         delete i;
     }
-    mapMonkey()->clear();
-    delete mapMonkey();
+    mapBlitzMax()->clear();
+    delete mapBlitzMax();
     //
     foreach (CodeItem *i, mapUser()->values()) {
         delete i;
@@ -225,7 +233,8 @@ void CodeAnalyzer::loadTemplates( const QString &path ) {
         stream.setCodec( "UTF-8" );
         QString text = stream.readAll();
         file.close();
-        int i1,i2=-1,len = text.length();
+        int i1,i2=-1;
+        //len = text.length();
         while(true) {
             i1 = text.indexOf('<',i2+1);
             if(i1 < 0)
@@ -260,15 +269,15 @@ void CodeAnalyzer::loadKeywords( const QString &path ) {
         file.close();
     }
     else {
-        text = "Void;Strict;Public;Private;Property;"
-            "Bool;Int;Float;String;Array;Object;Mod;Continue;Exit;"
-            "Include;Import;Module;Extern;"
+        text = "Strict;SuperStrict;Public;Private;"
+            "Byte;Short;Int;Long;Float;Double;String;Object;Mod;Continue;Exit;Ptr;Var;"
+            "Include;Import;Module;Extern;Framework;ModuleInfo;"
             "New;Self;Super;Eachin;True;False;Null;Not;"
             "Extends;Abstract;Final;Native;Select;Case;Default;"
-            "Const;Local;Global;Field;Method;Function;Class;Interface;Implements;"
-            "And;Or;Shl;Shr;End;If;Then;Else;Elseif;Endif;While;Wend;Repeat;Until;Forever;For;To;Step;Next;Return;Inline;"
-            "Try;Catch;Throw;Throwable;"
-            "Print;Error;Alias;Rem";
+            "Const;Local;Global;Field;Method;Function;Type;Interface;Implements;"
+            "And;Or;Shl;Shr;End;If;Then;Else;Elseif;Endif;While;Wend;Repeat;Until;Forever;For;To;Step;Next;Return;"
+            "Try;Catch;Throw;"
+            "Rem;DebugLog;DebugStop;";
     }
     QStringList lines = text.split(';');
     QTextBlock block;
@@ -281,57 +290,65 @@ void CodeAnalyzer::loadKeywords( const QString &path ) {
 
 QHash<QString, QString> *CodeAnalyzer::mapTemplates() {
     static QHash<QString,QString> *m = 0;
-    if( !m )
+    if( !m ) {
         m = new QHash<QString,QString>;
+    }
     return m;
 }
 
-QMap<QString, CodeItem *>* CodeAnalyzer::mapMonkey() {
+QMap<QString, CodeItem *>* CodeAnalyzer::mapBlitzMax() {
     static QMap<QString,CodeItem*> *m = 0;
-    if( !m )
+    if( !m ) {
         m = new QMap<QString,CodeItem*>;
+    }
     return m;
 }
 
 QHash<QString, CodeItem *>* CodeAnalyzer::mapUser() {
     static QHash<QString,CodeItem*> *m = 0;
-    if( !m )
+    if( !m ) {
         m = new QHash<QString,CodeItem*>;
+    }
     return m;
 }
 
 QHash<QString, CodeItem *>* CodeAnalyzer::mapKeywords() {
     static QHash<QString,CodeItem*> *m = 0;
-    if( !m )
+    if( !m ) {
         m = new QHash<QString,CodeItem*>;
+    }
     return m;
 }
 
 QHash<QString, CodeItem *>* CodeAnalyzer::mapRem() {
     static QHash<QString,CodeItem*> *m = 0;
-    if( !m )
+    if( !m ) {
         m = new QHash<QString,CodeItem*>;
+    }
     return m;
 }
 
 QHash<QString, CodeItem *> *CodeAnalyzer::mapFolds() {
     static QHash<QString,CodeItem*> *m = 0;
-    if( !m )
+    if( !m ) {
         m = new QHash<QString,CodeItem*>;
+    }
     return m;
 }
 
 QStandardItemModel* CodeAnalyzer::treeItemModel() {
     static QStandardItemModel* m = 0;
-    if( !m )
+    if( !m ) {
         m = new QStandardItemModel;
+    }
     return m;
 }
 
 QStandardItemModel* CodeAnalyzer::listItemModel() {
     static QStandardItemModel* m = 0;
-    if( !m )
+    if( !m ) {
         m = new QStandardItemModel;
+    }
     return m;
 }
 
@@ -520,7 +537,7 @@ void CodeAnalyzer::identsList(const QString &text, int cursorPos, QStringList &l
     if(text.trimmed().isEmpty())
         return;
     int i = cursorPos;
-    int end = i;
+    //int end = i;
     QString s = "";
     bool skip = false;
     while( (--i) >= 0 ) {
@@ -588,7 +605,7 @@ CodeItem* CodeAnalyzer::scopeAt(const QTextBlock &block, bool classOnly, bool ch
         if(checkCurFile && item->filepath() != _curFilePath)
             continue;
         bool eq = (num == item->blockNumber());
-        if( (eq || num > item->blockNumber() && num < item->blockEndNumber()) && item->isMultiLine() ) {
+        if( (eq || (num > item->blockNumber() && num < item->blockEndNumber())) && item->isMultiLine() ) {
             res = item;
             if(eq) {
                 break;
@@ -604,7 +621,7 @@ CodeItem* CodeAnalyzer::scopeAt(const QTextBlock &block, bool classOnly, bool ch
                 foreach (item, list2) {
                     if(item->isMultiLine()) {//is container
                         eq = (num == item->blockNumber());
-                        if( (eq || num > item->blockNumber() && num < item->blockEndNumber()) ) {
+                        if( (eq || (num > item->blockNumber() && num < item->blockEndNumber())) ) {
                             res = item;
                             search = !eq;
                             break;
@@ -706,15 +723,15 @@ QStringList CodeAnalyzer::extractParams(const QString &text) {
     return list;
 }
 
-void CodeAnalyzer::clearMonkey() {
-    mapMonkey()->clear();
+void CodeAnalyzer::clearBlitzMax() {
+    mapBlitzMax()->clear();
 }
 
 void CodeAnalyzer::analyzeDir( const QString &path, const QStringList &exclude ) {
 
     QDir dir(path);
     QStringList filters;
-    filters << "*.monkey";
+    filters << "*.bmx";
     QStringList list = dir.entryList(dir.filter());
     QString file;
     for( int k = 0; k < list.size() ; ++k ) {
@@ -726,12 +743,45 @@ void CodeAnalyzer::analyzeDir( const QString &path, const QStringList &exclude )
             if(!exclude.contains(file))
                 analyzeDir(path+file+"/", exclude);
         }
-        else if(extractExt(file) == "monkey"){
+        else if(extractExt(file) == "bmx"){
             analyzeFile(path+file);
         }
     }
 }
 
+void CodeAnalyzer::analyzeMods() {
+
+    QStringList mods;
+
+    enumModules("", mods);
+
+
+    for (int i = 0; i < mods.size(); i++) {
+        QString modid(mods.at(i));
+        QString source(moduleSource(modid));
+
+        analyzeFile(source);
+
+    }
+   /* QDir dir(path);
+    QStringList filters;
+    filters << "*.bmx";
+    QStringList list = dir.entryList(dir.filter());
+    QString file;
+    for( int k = 0; k < list.size() ; ++k ) {
+        file = list.at(k);
+        if(file=="." || file=="..")
+            continue;
+        QFileInfo info(dir,file);
+        if(info.isDir()) {
+            if(!exclude.contains(file))
+                analyzeDir(path+file+"/", exclude);
+        }
+        else if(extractExt(file) == "bmx"){
+            analyzeFile(path+file);
+        }
+    }*/
+}
 bool CodeAnalyzer::analyzeFile( const QString &path, int kind ) {
     QFile file(path);
     if( file.open( QIODevice::ReadOnly ) ) {
@@ -742,8 +792,9 @@ bool CodeAnalyzer::analyzeFile( const QString &path, int kind ) {
         file.close();
         QTextDocument *doc = new QTextDocument(text);
         bool b = parse(doc, path, kind);
-        if(kind == KIND_MONKEY)
+        if (kind == KIND_BLITZMAX) {
             delete doc;
+        }
         return b;
     }
     return false;
@@ -768,7 +819,7 @@ bool CodeAnalyzer::analyzeFile( const QString &path, int kind ) {
 
 
 bool CodeAnalyzer::needCloseWithEnd( const QString &line ) {
-    static QString arr[] = {"method","class", "function","select","try"};
+    static QString arr[] = {"method","type", "function","select","try"};
     int i = line.indexOf("'");//comment in line
     QString s = (i < 0 ? line : line.left(i));
     if(s.startsWith("interface"))
@@ -788,7 +839,7 @@ QIcon CodeAnalyzer::identIcon( const QString &ident ) {
     static QIcon ifield( ":/code/property.png" );
     static QIcon imethod( ":/code/method.png" );
     static QIcon ifunc( ":/code/function.png" );
-    static QIcon iclass( ":/code/class.png" );
+    static QIcon itype( ":/code/type.png" );
     static QIcon iinterf( ":/code/interface.png" );
     static QIcon ikeyword( ":/code/keyword.png" );
     static QIcon iother( ":/code/other.png" );
@@ -803,8 +854,8 @@ QIcon CodeAnalyzer::identIcon( const QString &ident ) {
         return imethod;
     if(s == "function")
         return ifunc;
-    if(s == "class")
-        return iclass;
+    if(s == "type")
+        return itype;
     if(s == "interface")
         return iinterf;
     if(s == "keyword")
@@ -814,9 +865,9 @@ QIcon CodeAnalyzer::identIcon( const QString &ident ) {
 
 void CodeAnalyzer::insertItem(QString ident, CodeItem *codeItem, int kind) {
 
-    if(kind == KIND_MONKEY) {
-        mapMonkey()->insert(ident, codeItem);
-        codeItem->setIsMonkey(true);
+    if(kind == KIND_BLITZMAX) {
+        mapBlitzMax()->insert(ident, codeItem);
+        codeItem->setIsBlitzMax(true);
     }
     else {
         mapUser()->insert(ident, codeItem);
@@ -1105,10 +1156,10 @@ bool CodeAnalyzer::parse(QTextDocument *doc, const QString &path , int kind, QLi
         QString decl = line.left(i).toLower();
         line = line.mid(i+1).trimmed();
 
-        if(kind == KIND_MONKEY) {
+        if(kind == KIND_BLITZMAX) {
             autoFormat(line);
         }
-        if(decl == "class" || decl == "interface") {
+        if(decl == "type" || decl == "interface") {
             CodeItem *item = new CodeItem(decl, line, indent, block, path, 0);
             item->setKind(kind);
             item->setFoldable(true);
@@ -1282,7 +1333,7 @@ bool CodeAnalyzer::parse(QTextDocument *doc, const QString &path , int kind, QLi
 }
 
 bool CodeAnalyzer::containsMonkey( const QString &ident ) {
-    return mapMonkey()->contains(ident);
+    return mapBlitzMax()->contains(ident);
 }
 
 bool CodeAnalyzer::containsUser( const QString &ident ) {
@@ -1298,7 +1349,7 @@ CodeItem* CodeAnalyzer::itemKeyword(const QString &ident ) {
 }
 
 CodeItem* CodeAnalyzer::itemMonkey(const QString &ident ) {
-    return mapMonkey()->value(ident, 0);
+    return mapBlitzMax()->value(ident, 0);
 }
 
 CodeItem* CodeAnalyzer::itemUser(const QString &ident, bool withChildren ) {
@@ -1369,7 +1420,7 @@ void CodeAnalyzer::fillListFromCommon( QListWidget *l, const QString &ident, con
         }
     }
 
-    list = mapMonkey()->values();
+    list = mapBlitzMax()->values();
     foreach (item, list) {
         if( ident == "" || item->ident().startsWith(ident, Qt::CaseInsensitive) ) {
             CodeItem::addUnique(listRes,item);
@@ -1709,9 +1760,9 @@ bool CodeAnalyzer::autoFormat( QString &s, bool force ) {
     snippetmethodnamestrictBool += "<---->End";
 
     QString snippetclasename;
-    snippetclasename += "Class {{Xname}}\n";
+    snippetclasename += "Type {{Xname}}\n";
     snippetclasename += "\n";
-    snippetclasename += "End\n";
+    snippetclasename += "End Type\n";
 
     //key down
     QString snippetkeydowndireccional;
@@ -2099,7 +2150,7 @@ bool CodeAnalyzer::autoFormat( QString &s, bool force ) {
         repl = true;
     }
 
-    bool iff = (trimmed.startsWith("if") || trimmed.startsWith("If") || trimmed.startsWith("while") || trimmed.startsWith("While"));
+    bool iff = (trimmed.startsWith("if", Qt::CaseInsensitive) || trimmed.startsWith("while", Qt::CaseInsensitive));
     //autoformat
     len2 = s.length()-1;
     QString res = "";
@@ -2266,7 +2317,7 @@ CodeItem::CodeItem(QString decl, QString line, int indent, QTextBlock &block, co
     _descr = _descrAsItem = line;
     _identType = "Int";
     _foldable = false;
-    _isClass = _isFunc = _isField = _isKeyword = _isMonkey = _isUser = false;
+    _isClass = _isFunc = _isField = _isKeyword = _isBlitzMax = _isUser = false;
     _isParam = _isVar = _isInherited = _isInterface = false;
     _identForInsert = "";
     _filepath = path;
@@ -2283,7 +2334,7 @@ CodeItem::CodeItem(QString decl, QString line, int indent, QTextBlock &block, co
         _module = _module.left(_module.length()-7);// .monkey
     }
 
-    _isClass = (decl == "class");
+    _isClass = (decl == "type");
     _isInterface = (decl == "interface");
     if(_isClass || _isInterface) {
         //qDebug() << "if 1";
@@ -2372,7 +2423,7 @@ CodeItem::CodeItem(QString decl, QString line, int indent, QTextBlock &block, co
         }
         _isFunc = true;
     }
-    else if(decl == "field" || decl == "global" || decl == "const" || decl == "local" || decl == "param") {
+    else if(decl == "field" || decl == "global" || decl == "const" || decl == "local") {
         //qDebug()<<"line:"<<line;
         int i;
         i = line.indexOf(":=");
@@ -2455,7 +2506,7 @@ CodeItem::CodeItem(QString decl, QString line, int indent, QTextBlock &block, co
         if( line=="Include"||line=="Import"||line=="Module"||line=="Extern"||
                 line=="New"||line=="Eachin"||
                 line=="Extends"||/*topic=="Abstract"||topic=="Final"||*/line=="Native"||line=="Select"||line=="Case"||
-                line=="Const"||line=="Local"||line=="Global"||line=="Field"||line=="Method"||line=="Function"||line=="Class"||line=="Interface"||line=="Implements"||
+                line=="Const"||line=="Local"||line=="Global"||line=="Field"||line=="Method"||line=="Function"||line=="Type"||line=="Interface"||line=="Implements"||
                 line=="And"||line=="Or"||
                 line=="Until"||line=="For"||line=="To"||line=="Step"||
                 line=="Catch"||line=="Print" ) {
@@ -2521,14 +2572,14 @@ void CodeItem::addChild(CodeItem *item) {
 }
 
 int CodeItem::blockNumber() {
-    if(isMonkey() || !_block.isValid())
+    if(isBlitzMax() || !_block.isValid())
         return _blockNumber;
     else //if(_block.isValid())
         return _block.blockNumber();
 }
 
 int CodeItem::blockEndNumber() {
-    if(isMonkey() || !_blockEnd.isValid())
+    if(isBlitzMax() || !_blockEnd.isValid())
         return _blockEndNumber;
     else //if(_blockEnd.isValid())
         return _blockEnd.blockNumber();
@@ -2679,7 +2730,7 @@ void CodeItem::setItemWithData(const QString &name, ItemWithData *iwd) {
 }
 
 void CodeItem::setKind(int kind) {
-    setIsMonkey(kind == CodeAnalyzer::KIND_MONKEY);
+    setIsBlitzMax(kind == CodeAnalyzer::KIND_BLITZMAX);
     setIsUser(kind == CodeAnalyzer::KIND_USER);
 }
 
@@ -2752,7 +2803,7 @@ QString CodeItem::summary() {
             basei = "-";
         s += "<u>with inheritance:</u>";
         s += "<table width2='222' cellspacing='5'>";
-        s += "<tr><td align='right'>classes:</td><td>"+basec+"</td></tr>";
+        s += "<tr><td align='right'>types:</td><td>"+basec+"</td></tr>";
         s += "<tr><td align='right'>interfaces:</td><td>"+basei+"</td></tr>";
         s += "<tr><td align='right'>fields:</td><td>"+QString::number(fld)+"</td></tr>";
         s += "<tr><td align='right'>globals:</td><td>"+QString::number(glbl)+"</td></tr>";

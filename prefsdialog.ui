@@ -20,7 +20,7 @@
    <item>
     <widget class="QToolBox" name="toolBox">
      <property name="currentIndex">
-      <number>0</number>
+      <number>3</number>
      </property>
      <widget class="QWidget" name="pageEditor">
       <property name="geometry">
@@ -28,7 +28,7 @@
         <x>0</x>
         <y>0</y>
         <width>473</width>
-        <height>233</height>
+        <height>218</height>
        </rect>
       </property>
       <attribute name="label">
@@ -63,8 +63,8 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>460</width>
-            <height>616</height>
+            <width>456</width>
+            <height>678</height>
            </rect>
           </property>
           <layout class="QVBoxLayout" name="verticalLayout_5">
@@ -90,7 +90,7 @@
                </property>
                <property name="currentFont">
                 <font>
-                 <family>Cousine</family>
+                 <family>Liberation Mono</family>
                 </font>
                </property>
               </widget>
@@ -397,8 +397,8 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>473</width>
-        <height>233</height>
+        <width>98</width>
+        <height>81</height>
        </rect>
       </property>
       <attribute name="label">
@@ -430,8 +430,8 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>471</width>
-            <height>231</height>
+            <width>266</width>
+            <height>101</height>
            </rect>
           </property>
           <layout class="QVBoxLayout" name="verticalLayout_7">
@@ -535,8 +535,8 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>473</width>
-        <height>233</height>
+        <width>98</width>
+        <height>81</height>
        </rect>
       </property>
       <attribute name="label">
@@ -568,8 +568,8 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>471</width>
-            <height>231</height>
+            <width>336</width>
+            <height>138</height>
            </rect>
           </property>
           <layout class="QVBoxLayout" name="verticalLayout_9">
@@ -638,11 +638,11 @@
         <x>0</x>
         <y>0</y>
         <width>473</width>
-        <height>233</height>
+        <height>218</height>
        </rect>
       </property>
       <attribute name="label">
-       <string>Monkey path</string>
+       <string>BlitzMax path</string>
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_2">
        <property name="spacing">
@@ -671,7 +671,7 @@
             <x>0</x>
             <y>0</y>
             <width>471</width>
-            <height>231</height>
+            <height>216</height>
            </rect>
           </property>
           <layout class="QVBoxLayout" name="verticalLayout_3">
@@ -687,12 +687,12 @@
               <item>
                <widget class="QLabel" name="label_3">
                 <property name="text">
-                 <string>Monkey path:</string>
+                 <string>BlitzMax path:</string>
                 </property>
                </widget>
               </item>
               <item>
-               <widget class="QLineEdit" name="monkeyPathWidget">
+               <widget class="QLineEdit" name="blitzMaxPathWidget">
                 <property name="layoutDirection">
                  <enum>Qt::LeftToRight</enum>
                 </property>
@@ -702,7 +702,7 @@
                </widget>
               </item>
               <item>
-               <widget class="QPushButton" name="monkeyPathButton">
+               <widget class="QPushButton" name="blitzMaxPathButton">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
                   <horstretch>0</horstretch>
@@ -782,8 +782,8 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>473</width>
-        <height>233</height>
+        <width>98</width>
+        <height>81</height>
        </rect>
       </property>
       <attribute name="label">
@@ -815,8 +815,8 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>471</width>
-            <height>231</height>
+            <width>127</width>
+            <height>119</height>
            </rect>
           </property>
           <layout class="QVBoxLayout" name="verticalLayout_11">
@@ -1067,7 +1067,7 @@
    </hints>
   </connection>
   <connection>
-   <sender>monkeyPathButton</sender>
+   <sender>blitzMaxPathButton</sender>
    <signal>clicked()</signal>
    <receiver>PrefsDialog</receiver>
    <slot>onBrowseForPath()</slot>

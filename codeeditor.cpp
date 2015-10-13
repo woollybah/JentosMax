@@ -235,7 +235,7 @@ void CodeEditor::onCompleteProcess(QListWidgetItem *item) {
     emit statusBarChanged( code->toString() );
 }
 
-void CodeEditor::onCompleteChangeItem(QListWidgetItem *current, QListWidgetItem *previous) {
+void CodeEditor::onCompleteChangeItem(QListWidgetItem *current, QListWidgetItem */*previous*/) {
     ListWidgetCompleteItem *lwi = dynamic_cast<ListWidgetCompleteItem*>(current);
     emit statusBarChanged( lwi->codeItem()->toString() );
 }
@@ -273,7 +273,6 @@ bool CodeEditor::open( const QString &path ){
 
     document()->setModified( false );
     _modified=0;
-
 
     return true;
 }
@@ -322,7 +321,7 @@ void CodeEditor::rename( const QString &path ){
 
     _txt = textFileTypes.contains( t );
     _code = codeFileTypes.contains( t );
-    _monkey = _fileType=="monkey";
+    _blitzMax = _fileType=="bmx";
 
     if( _txt ){
         setLineWrapMode( QPlainTextEdit::WidgetWidth );
@@ -354,6 +353,7 @@ void CodeEditor::cursorLineChanged() {
         _blockChangeCursorMethod = false;
         return;
     }
+
     if(isTxt())
         return;
     //autoformat line
@@ -611,7 +611,7 @@ void CodeEditor::onPrefsChanged( const QString &name ){
         QString cfg = Theme::hexColor(fg);
 
         QString s = "background:"+cbg+";background-color:"+cbg+";color:"+cfg+";";
-        setStyleSheet(s);
+        //setStyleSheet(s); BaH
 
         QFont font;
         font.setFamily( prefs->getString( "fontFamily" ) );
@@ -624,6 +624,9 @@ void CodeEditor::onPrefsChanged( const QString &name ){
         }
 
         setFont( font );
+
+        // set line numbers with matching font style
+        _lineNumberArea->setFont(font);
 
         QFontMetrics fm( font );
         setTabStopWidth( fm.width(' ')*prefs->getInt( "tabSize" ) );
@@ -979,7 +982,9 @@ void CodeEditor::autoformatAll() {
     }
     c.endEditBlock();
     _highlighter->setEnabled(true);
+    bool blocked = blockSignals(true); // formatting changes text...
     _highlighter->rehighlight();
+    blockSignals(blocked);
 }
 
 void CodeEditor::lowerUpperCase(bool lower) {
@@ -1293,7 +1298,7 @@ void CodeEditor::resizeEvent(QResizeEvent *e) {
     }
 }
 
-void CodeEditor::keyReleaseEvent( QKeyEvent *event ) {
+void CodeEditor::keyReleaseEvent( QKeyEvent */*event*/ ) {
     //highlightLine( textCursor().blockNumber(), HlCaretRow );
     QGuiApplication::restoreOverrideCursor();
 }
@@ -1399,7 +1404,9 @@ void CodeEditor::analyzeCode() {
     bool res = CodeAnalyzer::parse(document(), _path);
     if(res) {
         fillCodeTree();
+        bool blocked = blockSignals(true); // formatting changes text...
         _highlighter->rehighlight();
+        blockSignals(blocked);
         this->repaint();
         //qDebug() << "code analyze done";
     }
@@ -1971,7 +1978,7 @@ if(Prefs::prefs()->getBool("AutoBracket")==true){
     }
 
 
-    if( _monkey ){
+    if( _blitzMax ){
         if( key >= 32 && key <= 255 ){
             if(!ctrl && !block.text().trimmed().startsWith("'") && (!aucompIsVisible())) {
                 QString ident = identAtCursor(false);
@@ -2176,25 +2183,52 @@ void Highlighter::onPrefsChanged( const QString &name ){
         _stringsColor = prefs->getColor("stringsColor");
         _identifiersColor = prefs->getColor("identifiersColor");
         _keywordsColor = prefs->getColor("keywordsColor");
-        _monkeywordsColor = prefs->getColor("monkeywordsColor");
+        _blitzMaxwordsColor = prefs->getColor("monkeywordsColor");
         _userwordsColor = prefs->getColor("userwordsColor");
         _userwordsVarColor = prefs->getColor("userwordsVarColor");
         _userwordsDeclColor = prefs->getColor("userwordsDeclColor");
         _paramsColor = prefs->getColor("paramsColor");
         _commentsColor = prefs->getColor("commentsColor");
         _highlightColor = prefs->getColor("highlightColor");
+        bool blocked = blockSignals(true); // formatting changes text...
         rehighlight();
+        blockSignals(blocked);
     }
 }
 
 void Highlighter::highlightBlock( const QString &ctext ){
-    //_enabled = false;
-    if(!_enabled)
-        return;
 
-    if(ctext.trimmed().isEmpty())
+    //_enabled = false;
+    if (!_enabled) {
         return;
-    //qDebug() << "highlight: "+ctext;
+    }
+
+    QString text(ctext.trimmed());
+
+    int state = previousBlockState();
+
+    // processing a Rem block ?
+    if (state == 1) {
+        setTextFormat(0, ctext.length(), FormatComment);
+        if (text.startsWith("end rem", Qt::CaseInsensitive) || text.startsWith("endrem", Qt::CaseInsensitive)) {
+            setCurrentBlockState(0);
+        } else {
+            // still in the Rem block...
+            setCurrentBlockState(1);
+        }
+        return;
+    }
+
+    if (text.isEmpty()) {
+        return;
+    }
+
+    // TODO : use the toker instead...
+    if (text.startsWith("rem", Qt::CaseInsensitive)) {
+        setCurrentBlockState(1);
+        setTextFormat(0, ctext.length(), FormatComment);
+        return;
+    }
 
     int i = 0, n = ctext.length();
 
@@ -2213,7 +2247,7 @@ void Highlighter::highlightBlock( const QString &ctext ){
         return;
     }
 
-    bool monkeyFile = _editor->isMonkey();
+    bool blitzMaxFile = _editor->isBlitzMax();
 
     Formats format = FormatDefault;
     //Formats formatPrev = format;
@@ -2278,14 +2312,14 @@ void Highlighter::highlightBlock( const QString &ctext ){
                             format = FormatUserClass;
                         }
                     }
-                    else if(item->isMonkey() && item->isClassOrInterface()) {
-                        format = FormatMonkeyClass;
+                    else if(item->isBlitzMax() && item->isClassOrInterface()) {
+                        format = FormatBlitzMaxClass;
                     }
                     italic = (item->decl()=="const"||item->decl()=="global"||(item->parent()!=0 && item->decl()=="function"));
                 }
             }
         }
-        else if( c == '0' && !monkeyFile ) {
+        else if( c == '0' && !blitzMaxFile ) {
             if( i < n && ctext[i] == 'x' ) {
                 for( ++i ; i < n && isHexDigit( ctext[i] ) ; ++i ){}
             }
@@ -2309,16 +2343,16 @@ void Highlighter::highlightBlock( const QString &ctext ){
             }
             format = FormatNumber;
         }
-        else if( c == '%' && monkeyFile && i < n && isBinDigit( ctext[i] ) ){
+        else if( c == '%' && blitzMaxFile && i < n && isBinDigit( ctext[i] ) ){
             for( ++i ; i < n && isBinDigit( ctext[i] ) ; ++i ){}
             format = FormatNumber;
         }
-        else if( c == '$' && monkeyFile && i < n && isHexDigit( ctext[i] ) ){
+        else if( c == '$' && blitzMaxFile && i < n && isHexDigit( ctext[i] ) ){
             for( ++i ; i < n && isHexDigit( ctext[i] ) ; ++i ){}
             format = FormatNumber;
         }
         else if( c == '\"' ){
-            if( monkeyFile ){
+            if( blitzMaxFile ){
                 for( ; i < n && ctext[i] != '\"' ; ++i ){}
             }
             else {
@@ -2331,7 +2365,7 @@ void Highlighter::highlightBlock( const QString &ctext ){
             format = FormatString;
         }
         else if( c == '\'' ){
-            if( monkeyFile ){
+            if( blitzMaxFile ){
                 for( ;i < n && ctext[i] != '\n' ; ++i ){}
                 if( i < n ) ++i;
                 format = FormatComment;
@@ -2375,8 +2409,8 @@ void Highlighter::setTextFormat(int start, int end, Formats format, bool italic)
         color = _userwordsVarColor;
     else if(format == FormatUserDecl)
         color = _userwordsDeclColor;
-    else if(format == FormatMonkeyClass)
-        color = _monkeywordsColor;
+    else if(format == FormatBlitzMaxClass)
+        color = _blitzMaxwordsColor;
     tcf.setForeground(QBrush(color));
     tcf.setFontItalic(italic);
     setFormat(start, end-start, tcf);

@@ -511,7 +511,7 @@
      <x>0</x>
      <y>0</y>
      <width>1015</width>
-     <height>20</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -546,20 +546,30 @@
     <property name="title">
      <string>Build</string>
     </property>
+    <widget class="QMenu" name="menuBuildOptions">
+     <property name="title">
+      <string>Build Options</string>
+     </property>
+     <addaction name="actionQuickBuild"/>
+     <addaction name="actionThreadedBuild"/>
+     <addaction name="actionBuildGUIApp"/>
+     <addaction name="actionVerboseBuild"/>
+    </widget>
     <addaction name="actionBuildBuild"/>
     <addaction name="actionBuildRun"/>
-    <addaction name="actionBuildCheck"/>
-    <addaction name="actionBuildUpdate"/>
+    <addaction name="actionCommandLine"/>
     <addaction name="separator"/>
     <addaction name="actionStep"/>
     <addaction name="actionStep_In"/>
     <addaction name="actionStep_Out"/>
     <addaction name="actionKill"/>
     <addaction name="separator"/>
-    <addaction name="actionBuildTarget"/>
-    <addaction name="actionBuildConfig"/>
+    <addaction name="menuBuildOptions"/>
     <addaction name="separator"/>
     <addaction name="actionLock_Build_File"/>
+    <addaction name="separator"/>
+    <addaction name="actionBuildModules"/>
+    <addaction name="actionRebuildAllModules"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
     <property name="title">
@@ -1313,10 +1323,16 @@ Don't change documents between find usages and rename</string>
    <property name="text">
     <string>Close</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+W</string>
+   </property>
   </action>
   <action name="actionClose_All">
    <property name="text">
     <string>Close All</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+W</string>
    </property>
   </action>
   <action name="actionFileQuit">
@@ -1336,7 +1352,7 @@ Don't change documents between find usages and rename</string>
     <string>Build/Run</string>
    </property>
    <property name="shortcut">
-    <string>F5</string>
+    <string>Ctrl+R</string>
    </property>
   </action>
   <action name="actionNew">
@@ -1659,7 +1675,7 @@ Don't change documents between find usages and rename</string>
     <string>Build</string>
    </property>
    <property name="shortcut">
-    <string>F7</string>
+    <string>Ctrl+B</string>
    </property>
   </action>
   <action name="actionEditFindInFiles">
@@ -2104,6 +2120,41 @@ Don't change documents between find usages and rename</string>
    </property>
    <property name="toolTip">
     <string>MonkeyBuildandRun</string>
+   </property>
+  </action>
+  <action name="actionCommandLine">
+   <property name="text">
+    <string>Command Line...</string>
+   </property>
+  </action>
+  <action name="actionBuildModules">
+   <property name="text">
+    <string>Build Modules</string>
+   </property>
+  </action>
+  <action name="actionRebuildAllModules">
+   <property name="text">
+    <string>Rebuild All Modules</string>
+   </property>
+  </action>
+  <action name="actionQuickBuild">
+   <property name="text">
+    <string>Quick Build</string>
+   </property>
+  </action>
+  <action name="actionThreadedBuild">
+   <property name="text">
+    <string>Threaded Build</string>
+   </property>
+  </action>
+  <action name="actionBuildGUIApp">
+   <property name="text">
+    <string>Build GUI App</string>
+   </property>
+  </action>
+  <action name="actionVerboseBuild">
+   <property name="text">
+    <string>Verbose Build</string>
    </property>
   </action>
  </widget>

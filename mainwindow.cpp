@@ -41,11 +41,13 @@ See LICENSE.TXT for licensing terms.
 #define _STRINGIZE( X ) _QUOTE(X)
 
 #define TED_VERSION "1.17"
-#define APP_VERSION "1.3.1"
-#define APP_NAME "Jentos IDE"
+#define APP_VERSION "1.4.0"
+#define APP_NAME "JentosMax"
+
+#define SOURCE_FILES "*.bmx *.cpp *.c *.cc *.h *.hh *.java *.bmk"
 
 
-QString MainWindow::_monkeyPath;
+QString MainWindow::_blitzMaxPath;
 QString MainWindow::_transPath;
 
 
@@ -71,9 +73,13 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow( parent ),_ui( new Ui::Mai
     //Enables pdf viewing!
     QWebSettings::globalSettings()->setAttribute( QWebSettings::PluginsEnabled,true );
 
+#ifdef Q_OS_MAC
+    QSettings::setDefaultFormat( QSettings::NativeFormat );
+#else
     QSettings::setDefaultFormat( QSettings::IniFormat );
-    QCoreApplication::setOrganizationName( "FingerDev Studio" );
-    QCoreApplication::setOrganizationDomain( "fingerdev.com" );
+#endif
+    QCoreApplication::setOrganizationName( "Fans of BlitzMax" );
+    QCoreApplication::setOrganizationDomain( "blitzmax.com" );
     QCoreApplication::setApplicationName( APP_NAME );
 
     _ui->setupUi( this );
@@ -100,15 +106,39 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow( parent ),_ui( new Ui::Mai
     //targets combobox
     _targetsWidget=new QComboBox;
     _targetsWidget->setMinimumWidth(100);
+    _targetsWidget->addItem( tr("Win32") );
+    _targetsWidget->addItem( tr("Linux") );
+    _targetsWidget->addItem( tr("MacOS X") );
+    _targetsWidget->addItem( tr("Raspberry Pi") );
+    _targetsWidget->addItem( tr("Android") );
+    _targetsWidget->addItem( tr("iOS") );
+    _targetsWidget->addItem( tr("Web") );
     _ui->buildToolBar->addWidget( _targetsWidget );
+
+#ifdef Q_OS_WIN
+    _targetsWidget->setCurrentIndex(0);
+#elif defined (Q_OS_LINUX)
+    _targetsWidget->setCurrentIndex(1);
+#else // OS X
+    _targetsWidget->setCurrentIndex(2);
+#endif
+
+     connect( _targetsWidget,SIGNAL(currentIndexChanged(int)),SLOT(onTargetChanged(int)) );
+
+    //architectures combobox
+    _architecturesWidget=new QComboBox;
+    _architecturesWidget->setMinimumWidth(140);
+    _architecturesWidget->addItem( tr("x86") );
+    _architecturesWidget->addItem( tr("x64") );
+    _ui->buildToolBar->addWidget( _architecturesWidget );
 
     QWidget *w = new QWidget;
     w->setFixedWidth(3);
     _ui->buildToolBar->addWidget(w);
 
     _configsWidget=new QComboBox;
-    _configsWidget->addItem( "Debug" );
-    _configsWidget->addItem( "Release" );
+    _configsWidget->addItem( tr("Debug") );
+    _configsWidget->addItem( tr("Release") );
     _ui->buildToolBar->addWidget( _configsWidget );
 
     //quick help search combo
@@ -222,15 +252,15 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow( parent ),_ui( new Ui::Mai
     _fileImagePopupMenu->addAction( _ui->actionRenameFile );
     _fileImagePopupMenu->addAction( _ui->actionDeleteFile );
 
-    _fileMonkeyPopupMenu=new QMenu;
-    _fileMonkeyPopupMenu->addAction( _ui->actionMonkeyBuild_and_Run );
-    _fileMonkeyPopupMenu->addSeparator();
-    _fileMonkeyPopupMenu->addAction( _ui->actionMonkeyBuild );
-    _fileMonkeyPopupMenu->addSeparator();
-    _fileMonkeyPopupMenu->addAction( _ui->actionOpen_on_Desktop );
-    _fileMonkeyPopupMenu->addSeparator();
-    _fileMonkeyPopupMenu->addAction( _ui->actionRenameFile );
-    _fileMonkeyPopupMenu->addAction( _ui->actionDeleteFile );
+    _fileBlitzMaxPopupMenu=new QMenu;
+    _fileBlitzMaxPopupMenu->addAction( _ui->actionMonkeyBuild_and_Run );
+    _fileBlitzMaxPopupMenu->addSeparator();
+    _fileBlitzMaxPopupMenu->addAction( _ui->actionMonkeyBuild );
+    _fileBlitzMaxPopupMenu->addSeparator();
+    _fileBlitzMaxPopupMenu->addAction( _ui->actionOpen_on_Desktop );
+    _fileBlitzMaxPopupMenu->addSeparator();
+    _fileBlitzMaxPopupMenu->addAction( _ui->actionRenameFile );
+    _fileBlitzMaxPopupMenu->addAction( _ui->actionDeleteFile );
 
     _dirPopupMenu=new QMenu;
     _dirPopupMenu->addAction( _ui->actionNewFile );
@@ -310,6 +340,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow( parent ),_ui( new Ui::Mai
     connect( _ui->usagesTabWidget,SIGNAL(tabCloseRequested(int)),SLOT(onCloseUsagesTab(int)) );
     _ui->frameUsagesRename->hide();
 
+    _ui->actionQuickBuild->setCheckable(true);
+    _ui->actionThreadedBuild->setCheckable(true);
+    _ui->actionBuildGUIApp->setCheckable(true);
+    _ui->actionVerboseBuild->setCheckable(true);
     //_ui->menuStyles->hide();
     /*Prefs *p = Prefs::prefs();
     QString style = p->getString("style");
@@ -337,7 +371,7 @@ MainWindow::~MainWindow(){
     delete _projectPopupMenu;
     delete _filePopupMenu;
     delete _fileImagePopupMenu;
-    delete _fileMonkeyPopupMenu;
+    delete _fileBlitzMaxPopupMenu;
     delete _dirPopupMenu;
     delete _sourcePopupMenu;
     delete _editorPopupMenu;
@@ -346,7 +380,54 @@ MainWindow::~MainWindow(){
     CodeAnalyzer::finalize();
 }
 
-void MainWindow::onStyleChanged(bool b) {
+void MainWindow::onTargetChanged( int index ) {
+
+    _architecturesWidget->clear();
+
+    switch (index) {
+    case 0: // win32
+    case 1: // linux
+    case 2: // macos x
+        _architecturesWidget->addItem(tr("x86"));
+        _architecturesWidget->addItem(tr("x64"));
+
+        switch ((int)QSysInfo::WordSize) {
+        case 32:
+            _architecturesWidget->setCurrentIndex(0); // x86
+            break;
+        case 64:
+            _architecturesWidget->setCurrentIndex(1); // x64
+            break;
+        }
+
+        break;
+    case 3: // rpi
+        _architecturesWidget->addItem(tr("ARM"));
+        break;
+    case 4: // android
+        _architecturesWidget->addItem(tr("x86"));
+        _architecturesWidget->addItem(tr("x64"));
+        _architecturesWidget->addItem(tr("ARMeabi v5"));
+        _architecturesWidget->addItem(tr("ARMeabi v7a"));
+        _architecturesWidget->addItem(tr("ARM64 v8a"));
+
+        _architecturesWidget->setCurrentIndex(3); // v7
+        break;
+    case 5: // ios
+        _architecturesWidget->addItem(tr("x86"));
+        _architecturesWidget->addItem(tr("x64"));
+        _architecturesWidget->addItem(tr("ARMv7"));
+        _architecturesWidget->addItem(tr("ARM64"));
+
+        _architecturesWidget->setCurrentIndex(3); // arm64
+        break;
+    case 6: // emscripten
+        _architecturesWidget->addItem(tr("js"));
+        break;
+    }
+}
+
+void MainWindow::onStyleChanged(bool /*b */) {
     /*qDebug()<<"style changed";
     QList<QAction*> list = _ui->menuStyles->actions();
     QString style = sender()->objectName();
@@ -358,16 +439,16 @@ void MainWindow::onStyleChanged(bool b) {
     qApp->setStyle(QStyleFactory::create(style));*/
 }
 
-void MainWindow::showEvent(QShowEvent * event) {
+void MainWindow::showEvent(QShowEvent * /*event*/) {
     QSplashScreen *splash = 0;
     QTime t;
     int msec = t.msec();
     QPixmap pixmap(":ui/splash.png");
     splash = new QSplashScreen(pixmap);
     splash->show();
+    QApplication::processEvents(); // show the splash screen immediately
 
-    QString tr;
-    bool isValid = isValidMonkeyPath(_monkeyPath,tr);
+    bool isValid = isValidBlitzMaxPath(_blitzMaxPath);
 
     if( isValid ) {
         initKeywords();
@@ -394,12 +475,13 @@ void MainWindow::showEvent(QShowEvent * event) {
     }
 
     int dt = t.msec()-(msec+2000);
-    if(dt > 0)
+    if(dt > 0) {
         QThread::msleep(dt);
+    }
     splash->finish(this);
 
     if( !isValid ) {
-        QMessageBox::warning( this, APP_NAME, "Invalid Monkey path!\n\nPlease select correct path from the 'File -- Options' dialog." );
+        QMessageBox::warning( this, APP_NAME, "Cannot determine BlitzMax path!\n\nPlease select correct path from the 'File -- Options' dialog." );
         onFilePrefs();
     }
 
@@ -435,6 +517,7 @@ void MainWindow::updateTheme() {
         f.close();
     }
     css += "QDockWidget::title{text-align:center;}";
+
     qApp->setStyleSheet(css);
     QApplication::processEvents();
     //
@@ -487,19 +570,19 @@ void MainWindow::updateTheme() {
 
     //qDebug() << "update theme: "+Theme::theme();
     Prefs *p = Prefs::prefs();
-    if( !_monkeyPath.isEmpty() && p->getBool("replaceDocsStyle") ) {
+    if( !_blitzMaxPath.isEmpty() && p->getBool("replaceDocsStyle") ) {
         qDebug()<<"replace docs style";
         QString jent = QApplication::applicationDirPath() + "/pagestyle.css";
-        QString monk = _monkeyPath+"/docs/html/pagestyle.css";
+        QString monk = _blitzMaxPath+"/docs/html/pagestyle.css";
         if(!QFile::exists(jent)) {
             QFile::copy(monk,jent);
         }
 
         jent = QApplication::applicationDirPath() + (Theme::isDark() ? "/help_dark.css" : "/pagestyle.css");
         if(QFile::exists(jent)) {
-            bool b = QFile::remove(monk);
+           QFile::remove(monk);
             //qDebug()<<"remove:"<<b<<monk;
-            b = QFile::copy(jent,monk);
+            QFile::copy(jent,monk);
             //qDebug()<<"copy dark help:"<<b<<jent;
         }
     }
@@ -510,14 +593,14 @@ void MainWindow::initKeywords(){
 
     CodeAnalyzer::loadTemplates(QApplication::applicationDirPath()+"/templates.txt");
     CodeAnalyzer::loadKeywords(QApplication::applicationDirPath()+"/keywords.txt");
-    CodeAnalyzer::clearMonkey();
+    CodeAnalyzer::clearBlitzMax();
     QStringList exclude;
-    exclude << "trans";
-    CodeAnalyzer::analyzeDir(_monkeyPath+"/modules/", exclude);
+    //exclude << "trans";
+    CodeAnalyzer::analyzeMods();//_blitzMaxPath+"/mod", exclude);
 
     //CodeAnalyzer::print();
 
-    QuickHelp::init(_monkeyPath);//load keywords
+    QuickHelp::init(_blitzMaxPath);//load keywords
 
     _indexWidget->disconnect();
     _indexWidget->clear();
@@ -546,8 +629,8 @@ void MainWindow::parseAppArgs(){
 
 bool MainWindow::isBuildable( CodeEditor *editor ){
     if( !editor ) return false;
-    if( editor->fileType()=="monkey" ) return !_monkeyPath.isEmpty();
-    //if( editor->fileType()=="bmx" ) return !_blitzmaxPath.isEmpty();
+    //if( editor->fileType()=="monkey" ) return !_blitzMaxPath.isEmpty();
+    if( editor->fileType()=="bmx" ) return true;//!_blitzmaxPath.isEmpty();
     return false;
 }
 
@@ -576,7 +659,7 @@ QWidget *MainWindow::newFile( const QString &cpath ){
 
     if( path.isEmpty() ){
 
-        path=fixPath( QFileDialog::getSaveFileName( this,"New File",_defaultDir,"Source Files (*.monkey)" ) );
+        path=fixPath( QFileDialog::getSaveFileName( this,"New File",_defaultDir,"Source Files (*.bmx)" ) );
         if( path.isEmpty() ) return 0;
     }
 
@@ -590,7 +673,7 @@ QWidget *MainWindow::newFile( const QString &cpath ){
     return openFile( path,true );
 }
 
-void MainWindow::onOpenCodeFile(const QString &file, const QString &folder , const int &lineNumber) {
+void MainWindow::onOpenCodeFile(const QString &file, const QString &/*folder */, const int &lineNumber) {
     QWidget *w = openFile(file, false);
     if( CodeEditor *editor = qobject_cast<CodeEditor*>(w) ) {
         editor->highlightLine(lineNumber);
@@ -651,7 +734,7 @@ void MainWindow::onCloseUsagesTab(int index) {
     }
 }
 
-void MainWindow::onUsagesJumpToLine(QTreeWidgetItem *item, int column) {
+void MainWindow::onUsagesJumpToLine(QTreeWidgetItem *item, int /*column*/) {
     UsagesResult *u = UsagesResult::item(item);
     if(u) {
         onShowCode(u->path, u->blockNumber);
@@ -697,7 +780,8 @@ QWidget *MainWindow::openFile( const QString &cpath,bool addToRecent ){
         else {
             QWebView *webView = 0;
             for( int i = 0; i < _mainTabWidget->count(); ++i ){
-                if( webView = qobject_cast<QWebView*>( _mainTabWidget->widget( i ) ) ) break;
+                webView = qobject_cast<QWebView*>( _mainTabWidget->widget( i ) );
+                if( webView ) break;
             }
             if( !webView ){
                 webView = new QWebView;
@@ -721,7 +805,7 @@ QWidget *MainWindow::openFile( const QString &cpath,bool addToRecent ){
 
     if( path.isEmpty() ){
 
-        path=fixPath( QFileDialog::getOpenFileName( this,"Open File",_defaultDir,"Source Files (*.monkey *.cpp *.cs *.js *.as *.java);;Image Files(*.jpg *.png *.bmp);;All Files(*.*)" ) );
+        path=fixPath( QFileDialog::getOpenFileName( this,tr("Open File"),_defaultDir,"Source Files (" SOURCE_FILES ");;Image Files(*.jpg *.png *.bmp);;All Files(*.*)" ) );
         if( path.isEmpty() ) return 0;
 
         _defaultDir=extractDir( path );
@@ -738,7 +822,7 @@ QWidget *MainWindow::openFile( const QString &cpath,bool addToRecent ){
     editor = new CodeEditor;
     if( !editor->open( path ) ){
         delete editor;
-        QMessageBox::warning( this,"Open File Error","Error opening file: "+path );
+        QMessageBox::warning( this,tr("Open File Error"),"Error opening file: "+path );
         return 0;
     }
 
@@ -758,7 +842,7 @@ QWidget *MainWindow::openFile( const QString &cpath,bool addToRecent ){
 
     bool fileinvalidbool = false;
     int fileinvalidsnum = 4;
-    QString fileinvalids[fileinvalidsnum] = {"png","ico","jpg","gif"};
+    QString fileinvalids[] = {"png","ico","jpg","gif"};
     for(int a=0; a<fileinvalidsnum;a++){
 
         if( filemonkeytype.endsWith(fileinvalids[a])){
@@ -814,7 +898,7 @@ bool MainWindow::saveFile( QWidget *widget,const QString &cpath ){
 
         _mainTabWidget->setCurrentWidget( editor );
 
-        path=fixPath( QFileDialog::getSaveFileName( this,"Save File As",editor->path(),"Source Files (*.monkey *.cpp *.cs *.js *.as *.java)" ) );
+        path=fixPath( QFileDialog::getSaveFileName( this,tr("Save File As"),editor->path(),"Source Files (" SOURCE_FILES ")" ) );
         if( path.isEmpty() ) return false;
 
     }else if( !editor->modified() ){
@@ -823,7 +907,7 @@ bool MainWindow::saveFile( QWidget *widget,const QString &cpath ){
 
     bool done = editor->save( path );
     if( !done ){
-        QMessageBox::warning( this,"Save File Error","Error saving file: "+path );
+        QMessageBox::warning( this,tr("Save File Error"),"Error saving file: "+path );
         return false;
     }
 
@@ -850,7 +934,7 @@ bool MainWindow::closeFile( QWidget *widget,bool really ){
 
         QMessageBox msgBox;
         msgBox.setText( editor->path()+" has been modified." );
-        msgBox.setInformativeText( "Do you want to save your changes?" );
+        msgBox.setInformativeText( tr("Do you want to save your changes?") );
         msgBox.setStandardButtons( QMessageBox::Save|QMessageBox::Discard|QMessageBox::Cancel );
         msgBox.setDefaultButton( QMessageBox::Save );
 
@@ -926,9 +1010,9 @@ void MainWindow::closeEvent( QCloseEvent *event ){
         event->accept();
         //restore help css
         Prefs *p = Prefs::prefs();
-        if( !_monkeyPath.isEmpty() && p->getBool("replaceDocsStyle") ) {
+        if( !_blitzMaxPath.isEmpty() && p->getBool("replaceDocsStyle") ) {
             QString jent = QApplication::applicationDirPath() + "/pagestyle.css";
-            QString monk = _monkeyPath+"/docs/html/pagestyle.css";
+            QString monk = _blitzMaxPath+"/docs/html/pagestyle.css";
             if(QFile::exists(jent)) {
                 QFile::remove(monk);
                 QFile::copy(jent,monk);
@@ -943,36 +1027,21 @@ void MainWindow::closeEvent( QCloseEvent *event ){
 
 //Settings...
 //
-bool MainWindow::isValidMonkeyPath( const QString &path, QString &trans ){
-    trans = "transcc"+HOST;
-#ifdef Q_OS_WIN
-    trans += ".exe";
-#endif
-    QString s = path+"/bin/"+trans;
-    bool r = QFile::exists(s);
-    if(r) {
-        _monkeyPath = path;
-        _transPath = trans;
+bool MainWindow::isValidBlitzMaxPath(QString &path ){
+
+    path = blitzMaxPath(path);
+
+    if (!path.isEmpty()) {
         return true;
     }
-    trans = "trans"+HOST;
-#ifdef Q_OS_WIN
-    trans += ".exe";
-#endif
-    s = path+"/bin/"+trans;
-    r = QFile::exists(s);
-    if(r) {
-        _monkeyPath = path;
-        _transPath = trans;
-        return true;
-    }
+
     return false;
 }
 
 void MainWindow::enumTargets(){
-    if( _monkeyPath.isEmpty() ) return;
+    if( _blitzMaxPath.isEmpty() ) return;
 
-    QString cmd="\""+_monkeyPath+"/bin/"+_transPath+"\"";
+    QString cmd="\""+_blitzMaxPath+"/bin/"+_transPath+"\"";
 
     Process proc;
     if( !proc.start( cmd ) ) return;
@@ -1024,11 +1093,11 @@ void MainWindow::readSettings(){
 
     _isShowHelpInDock = prefs->getBool("showHelpInDock");
 
-    _monkeyPath = prefs->getString( "monkeyPath" );
-    _transPath = prefs->getString( "transPath" );
+    _blitzMaxPath = prefs->getString( "blitzMaxPath" );
+    //_transPath = prefs->getString( "transPath" );
 
     onHelpHome();
-    enumTargets();
+    //enumTargets();
 
     set->beginGroup( "mainWindow" );
     restoreGeometry( set->value( "geometry" ).toByteArray() );
@@ -1058,6 +1127,15 @@ void MainWindow::readSettings(){
         for( int i=0;i<_targetsWidget->count();++i ){
             if( _targetsWidget->itemText(i) == target ){
                 _targetsWidget->setCurrentIndex( i );
+                break;
+            }
+        }
+    }
+    QString arch = set->value( "architecture" ).toString();
+    if( !arch.isEmpty() ){
+        for( int i=0;i<_architecturesWidget->count();++i ){
+            if( _architecturesWidget->itemText(i) == arch ){
+                _architecturesWidget->setCurrentIndex( i );
                 break;
             }
         }
@@ -1123,6 +1201,7 @@ void MainWindow::writeSettings(){
 
     set->beginGroup( "buildSettings" );
     set->setValue( "target",_targetsWidget->currentText() );
+    set->setValue( "architecture",_architecturesWidget->currentText() );
     set->setValue( "config",_configsWidget->currentText() );
     set->setValue( "locked",_lockedEditor ? _lockedEditor->path() : "" );
     set->endGroup();
@@ -1194,11 +1273,11 @@ void MainWindow::updateActions(){
     //build menu
     CodeEditor *buildEditor=_lockedEditor ? _lockedEditor : _codeEditor;
     bool canBuild=!_consoleProc && isBuildable( buildEditor );
-    bool canTrans=canBuild && buildEditor->fileType()=="monkey";
+    //bool canTrans=canBuild && buildEditor->fileType()=="monkey";
     _ui->actionBuildBuild->setEnabled( canBuild );
     _ui->actionBuildRun->setEnabled( canBuild || db );
-    _ui->actionBuildCheck->setEnabled( canTrans );
-    _ui->actionBuildUpdate->setEnabled( canTrans );
+    //_ui->actionBuildCheck->setEnabled( canTrans );
+    //_ui->actionBuildUpdate->setEnabled( canTrans );
     _ui->actionStep->setEnabled( db );
     _ui->actionStep_In->setEnabled( db );
     _ui->actionStep_Out->setEnabled( db );
@@ -1311,7 +1390,7 @@ void MainWindow::onMainTabChanged( int index ){
     //qDebug()<<"444";
 }
 
-void MainWindow::onDockVisibilityChanged( bool visible ){
+void MainWindow::onDockVisibilityChanged( bool ){
 
     updateActions();
 }
@@ -1341,7 +1420,7 @@ void MainWindow::onProjectMenu( const QPoint &pos ){
 
     bool typeimagefile = false;
     int fileinvalidimgsnum = 4;
-    QString fileinvalidimg[fileinvalidimgsnum] = {"png","jpg","gif","ico"};
+    QString fileinvalidimg[] = {"png","jpg","gif","ico"};
 
         for(int a=0; a<fileinvalidimgsnum;a++){
 
@@ -1357,7 +1436,7 @@ void MainWindow::onProjectMenu( const QPoint &pos ){
         if(!typeimagefile){
 
             if(typefile.endsWith("monkey")){
-                menu=_fileMonkeyPopupMenu;
+                menu=_fileBlitzMaxPopupMenu;
             }else{
                 menu=_filePopupMenu;
             }
@@ -1377,9 +1456,9 @@ void MainWindow::onProjectMenu( const QPoint &pos ){
     if( action==_ui->actionNewFile ){
 
         bool ok=false;
-        QString name=QInputDialog::getText( this,"Create File","File name: "+info.filePath()+"/",QLineEdit::Normal,"",&ok );
+        QString name=QInputDialog::getText( this,tr("Create File"),"File name: "+info.filePath()+"/",QLineEdit::Normal,"",&ok );
         if( ok && !name.isEmpty() ){
-            if( extractExt( name ).isEmpty() ) name+=".monkey";
+            if( extractExt( name ).isEmpty() ) name+=".bmx";
             QString path=info.filePath()+"/"+name;
             newFile( path );
         }
@@ -1387,17 +1466,17 @@ void MainWindow::onProjectMenu( const QPoint &pos ){
     }else if( action==_ui->actionNewFolder ){
 
         bool ok=false;
-        QString name=QInputDialog::getText( this,"Create Folder","Folder name: "+info.filePath()+"/",QLineEdit::Normal,"",&ok );
+        QString name=QInputDialog::getText( this,tr("Create Folder"),"Folder name: "+info.filePath()+"/",QLineEdit::Normal,"",&ok );
         if( ok && !name.isEmpty() ){
             if( !QDir( info.filePath() ).mkdir( name ) ){
-                QMessageBox::warning( this,"Create Folder","Create folder failed" );
+                QMessageBox::warning( this,tr("Create Folder"),"Create folder failed" );
             }
         }
 
     }else if( action==_ui->actionRenameFile ){
 
         bool ok=false;
-        QString newName=QInputDialog::getText( this,"Rename file","New name:",QLineEdit::Normal,info.fileName(),&ok );
+        QString newName=QInputDialog::getText( this,tr("Rename file"),"New name:",QLineEdit::Normal,info.fileName(),&ok );
         if( ok ){
             QString oldPath=info.filePath();
             QString newPath=info.path()+"/"+newName;
@@ -1411,7 +1490,7 @@ void MainWindow::onProjectMenu( const QPoint &pos ){
                     }
                 }
             }else{
-                QMessageBox::warning( this,"Rename Error","Error renaming file: "+oldPath );
+                QMessageBox::warning( this,tr("Rename Error"),"Error renaming file: "+oldPath );
             }
         }
     }else if( action==_ui->actionOpen_on_Desktop ){
@@ -1468,7 +1547,7 @@ void MainWindow::onProjectMenu( const QPoint &pos ){
                         }
                     }
                 }else{
-                    QMessageBox::warning( this,"Delete Error","Error deleting file: "+info.filePath() );
+                    QMessageBox::warning( this,tr("Delete Error"),"Error deleting file: "+info.filePath() );
                 }
             }
         }
@@ -1617,7 +1696,7 @@ void MainWindow::onCodeTreeViewClicked( const QModelIndex &index ) {
 void MainWindow::onSourceListViewClicked( const QModelIndex &index ) {
     if(_codeEditor)
         _codeEditor->onSourceListViewClicked(index);
-    qDebug()<<"onSourceListViewClicked";
+    //qDebug()<<"onSourceListViewClicked";
 }
 
 //Console...
@@ -1648,13 +1727,13 @@ void MainWindow::cdebug( const QString &str ){
     print( str, "debug" );
 }
 
-void MainWindow::runCommand( QString cmd, QWidget *fileWidget ){
+void MainWindow::runCommand( QString cmd, QWidget *fileWidget, QString message ){
 
-    cmd=cmd.replace( "${TARGET}",_targetsWidget->currentText().replace( ' ','_' ) );
-    cmd=cmd.replace( "${CONFIG}",_configsWidget->currentText() );
-    cmd=cmd.replace( "${MONKEYPATH}",_monkeyPath );
+    //cmd=cmd.replace( "${TARGET}",_targetsWidget->currentText().replace( ' ','_' ) );
+    //cmd=cmd.replace( "${CONFIG}",_configsWidget->currentText() );
+    //cmd=cmd.replace( "${MONKEYPATH}",_blitzMaxPath );
     //cmd=cmd.replace( "${BLITZMAXPATH}",_blitzmaxPath );
-    if( fileWidget ) cmd=cmd.replace( "${FILEPATH}",widgetPath( fileWidget ) );
+    //if( fileWidget ) cmd=cmd.replace( "${FILEPATH}",widgetPath( fileWidget ) );
 
     _consoleProc = new Process;
 
@@ -1663,7 +1742,13 @@ void MainWindow::runCommand( QString cmd, QWidget *fileWidget ){
 
     _ui->outputTextEdit->clear();
 
-    print( cmd, "" );
+    if (!message.isEmpty()) {
+        print (message, "");
+    }
+
+    if (_ui->actionVerboseBuild->isChecked()) {
+        print( cmd, "" );
+    }
 
     if( !_consoleProc->start( cmd ) ){
         delete _consoleProc;
@@ -1713,15 +1798,17 @@ void MainWindow::onProcStdout(){
 
 void MainWindow::onProcStderr(){
 
-    if( _debugTreeModel && _debugTreeModel->stopped() ) return;
+    if( _debugTreeModel && _debugTreeModel->stopped() ) {
+        return;
+    }
 
     QString text=_consoleProc->readLine( 1 );
 
-    if( text.startsWith( "{{~~" ) && text.endsWith( "~~}}" ) ){
+    if ( text.startsWith( "~>" )) {
 
-        QString info=text.mid( 4,text.length()-8 );
+        QString info=text.mid( 2 );
 
-        int i=info.lastIndexOf( '<' );
+/*        int i=info.lastIndexOf( '<' );
         if( i!=-1 && info.endsWith( '>' ) ){
             QString path=info.left( i );
             int line=info.mid( i+1,info.length()-i-2 ).toInt()-1;
@@ -1729,7 +1816,7 @@ void MainWindow::onProcStderr(){
         }else{
             print( info, "error" );
         }
-
+*/
         if( !_debugTreeModel ){
 
             raise();
@@ -1742,10 +1829,10 @@ void MainWindow::onProcStderr(){
 
             _ui->debugDockWidget->setVisible(true);
 
-            print( "STOPPED", "error" );
+            //print( "STOPPED", "error" );
         }
 
-        _debugTreeModel->stop();
+        _debugTreeModel->stop(info);
 
         updateActions();
 
@@ -1755,7 +1842,7 @@ void MainWindow::onProcStderr(){
     print( text, "error" );
 }
 
-void MainWindow::onProcLineAvailable( int channel ){
+void MainWindow::onProcLineAvailable( int /*channel */){
     while( _consoleProc ){
         if( _consoleProc->isLineAvailable( 0 ) ){
             onProcStdout();
@@ -1788,48 +1875,94 @@ void MainWindow::onProcFinished(){
 
     updateActions();
 
-    statusBar()->showMessage( "Ready." );
+    statusBar()->showMessage( tr("Ready.") );
 }
 
 void MainWindow::build( QString mode, QString pathmonkey){
 
     CodeEditor *editor = (_lockedEditor ? _lockedEditor : _codeEditor);
-    if( !isBuildable( editor ) )
+    if( !isBuildable( editor ) ) {
         return;
+    }
 
     QString filePath = editor->path();
-    if( filePath.isEmpty() )
+    if( filePath.isEmpty() ) {
         return;
+    }
 
-    QString cmd, msg = "Buillding: "+filePath+"...";
+    QString cmd;
+    QString msg = "Buillding: "+ stripDir(filePath);
 
 
-    if( editor->fileType()=="monkey" ){
-        if( mode=="run" ){
-            if(pathmonkey.endsWith("run")){
+    if( editor->fileType()=="bmx" ){
 
-                cmd="\"${MONKEYPATH}/bin/"+_transPath+"\" -target=${TARGET} -config=${CONFIG} -run \"${FILEPATH}\"";
+        QString out(stripExt(filePath));
 
-            }else {
 
-                cmd="\"${MONKEYPATH}/bin/"+_transPath+"\" -target=${TARGET} -config=${CONFIG} -run "+pathmonkey;
-            }
-        }else if( mode=="build" ){
+        cmd += getBMKPath();
 
-            if(pathmonkey.endsWith("run")){
-                 cmd="\"${MONKEYPATH}/bin/"+_transPath+"\" -target=${TARGET} -config=${CONFIG} \"${FILEPATH}\"";
+        cmd += " makeapp";
+//        if( mode=="run" ){
+//            if(pathmonkey.endsWith("run")){
 
-            }else {
-                 cmd="\"${MONKEYPATH}/bin/"+_transPath+"\" -target=${TARGET} -config=${CONFIG} "+pathmonkey;
-            }
+//                cmd="\"${MONKEYPATH}/bin/"+_transPath+"\" -target=${TARGET} -config=${CONFIG} -run \"${FILEPATH}\"";
 
-        }else if( mode=="update" ){
-            cmd="\"${MONKEYPATH}/bin/"+_transPath+"\" -target=${TARGET} -config=${CONFIG} -update \"${FILEPATH}\"";
-            msg="Updating: "+filePath+"...";
-        }else if( mode=="check" ){
-            cmd="\"${MONKEYPATH}/bin/"+_transPath+"\" -target=${TARGET} -config=${CONFIG} -check \"${FILEPATH}\"";
-            msg="Checking: "+filePath+"...";
+//            }else {
+
+//                cmd="\"${MONKEYPATH}/bin/"+_transPath+"\" -target=${TARGET} -config=${CONFIG} -run "+pathmonkey;
+//            }
+//        }else if( mode=="build" ){
+
+//            if(pathmonkey.endsWith("run")){
+//                 cmd="\"${MONKEYPATH}/bin/"+_transPath+"\" -target=${TARGET} -config=${CONFIG} \"${FILEPATH}\"";
+
+//            }else {
+//                 cmd="\"${MONKEYPATH}/bin/"+_transPath+"\" -target=${TARGET} -config=${CONFIG} "+pathmonkey;
+//            }
+
+//        }else if( mode=="update" ){
+//            cmd="\"${MONKEYPATH}/bin/"+_transPath+"\" -target=${TARGET} -config=${CONFIG} -update \"${FILEPATH}\"";
+//            msg="Updating: "+filePath+"...";
+//        }else if( mode=="check" ){
+//            cmd="\"${MONKEYPATH}/bin/"+_transPath+"\" -target=${TARGET} -config=${CONFIG} -check \"${FILEPATH}\"";
+//            msg="Checking: "+filePath+"...";
+//        }
+        if ( mode =="run" ) {
+            cmd += " -x";
         }
+
+        // full build ?
+        if (! _ui->actionQuickBuild->isChecked()) {
+            cmd += " -a";
+        }
+
+        // gui build?
+        if (_ui->actionBuildGUIApp->isChecked()) {
+            cmd += " -t gui";
+        }
+
+        // debug / release
+        if (_configsWidget->currentIndex() == 0) {
+            cmd += " -d";
+            out += ".debug";
+        } else {
+            cmd += " -r";
+        }
+
+        // threaded build ?
+        if (_ui->actionThreadedBuild->isChecked()) {
+            cmd += " -h";
+            out += ".mt";
+        }
+
+        // verbose build?
+        if (_ui->actionVerboseBuild->isChecked()) {
+            cmd += " -v";
+        }
+
+        cmd += " -o " + quote(out) + " ";
+
+        cmd += quote(filePath);
     }
 
     if( !cmd.length() ) return;
@@ -1838,7 +1971,7 @@ void MainWindow::build( QString mode, QString pathmonkey){
 
     statusBar()->showMessage( msg );
 
-    runCommand( cmd,editor );
+    runCommand( cmd,editor, msg );
 }
 
 //***** File menu *****
@@ -1850,7 +1983,7 @@ void MainWindow::onFileNew(){
     else {
         QString s = QApplication::applicationDirPath()+"/projects/";
         QDir dir(s);
-        bool b = dir.mkpath(s);
+        dir.mkpath(s);
         //if(!b) {
         //    QMessageBox::information(this,"New File","Can't create dir");
         //}
@@ -1861,7 +1994,7 @@ void MainWindow::onFileNew(){
         QTime tt = QTime::currentTime();
         QString t = QString::number(tt.hour())+"-"+QString::number(tt.minute())+"-"+QString::number(tt.second());
 
-        s += y+"-"+m+"-"+d+"_"+t+".monkey";
+        s += y+"-"+m+"-"+d+"_"+t+".bmx";
         //QMessageBox::information(this,"",s);
         newFile(s);
     }
@@ -1887,7 +2020,8 @@ void MainWindow::onFileCloseAll(){
         int i;
         CodeEditor *editor=0;
         for( i=0;i<_mainTabWidget->count();++i ){
-            if( editor=qobject_cast<CodeEditor*>( _mainTabWidget->widget( i ) ) ) break;
+            editor=qobject_cast<CodeEditor*>( _mainTabWidget->widget( i ) );
+            if( editor ) break;
         }
         if( !editor ) return;
 
@@ -1901,7 +2035,7 @@ void MainWindow::onFileCloseOthers(){
 
     for(;;){
         int i;
-        QWidget *widget=0;
+        //QWidget *widget=0;
         CodeEditor *editor=0;
         for( i=0;i<_mainTabWidget->count();++i ){
             editor=qobject_cast<CodeEditor*>( _mainTabWidget->widget( i ) );
@@ -1953,14 +2087,14 @@ void MainWindow::onFilePrevious(){
 
 void MainWindow::onFilePrefs(){
 
-    QString mpath = _monkeyPath;
+    QString mpath = _blitzMaxPath;
 
     _prefsDialog->setModal( true );
 
     _prefsDialog->exec();
 
-    if(!_monkeyPath.isEmpty() && _monkeyPath != mpath){
-        enumTargets();
+    if(!_blitzMaxPath.isEmpty() && _blitzMaxPath != mpath){
+        //enumTargets();
         initKeywords();
 
         if(!_codeEditor)
@@ -2257,11 +2391,11 @@ void MainWindow::onBuildUnlockFile(){
 
 void MainWindow::onBuildAddProject(){
 
-    QString dir=fixPath( QFileDialog::getExistingDirectory( this,"Select project directory",_defaultDir,QFileDialog::ShowDirsOnly|QFileDialog::DontResolveSymlinks ) );
+    QString dir=fixPath( QFileDialog::getExistingDirectory( this,tr("Select project directory"),_defaultDir,QFileDialog::ShowDirsOnly|QFileDialog::DontResolveSymlinks ) );
     if( dir.isEmpty() ) return;
 
     if( !_projectTreeModel->addProject( dir ) ){
-        QMessageBox::warning( this,"Add Project Error","Error adding project: "+dir );
+        QMessageBox::warning( this,tr("Add Project Error"),"Error adding project: "+dir );
     }
 }
 
@@ -2279,7 +2413,7 @@ void MainWindow::onSwitchFullscreen() {
 
 void MainWindow::onHelpHome(){
 
-    QString htmlDocs=_monkeyPath+"/docs/html/Home.html";
+    QString htmlDocs=_blitzMaxPath+"/docs/html/Home.html";
 
     if( QFile::exists( htmlDocs ) ){
         openFile( "file:///"+htmlDocs,false );
@@ -2346,8 +2480,8 @@ void MainWindow::onHelpOnlineDocs() {
     openFile( "http://monkey-x.com/docs/html/Home.html", false );
 }
 
-void MainWindow::onHelpMonkeyHomepage() {
-    QString s = "http://monkey-x.com";
+void MainWindow::onHelpBlitzMaxHomepage() {
+    QString s = "http://blitzmax.com";
     QDesktopServices::openUrl( s );
 }
 
@@ -2378,13 +2512,13 @@ void MainWindow::onLinkClicked( const QUrl &url ){
 }
 
 void MainWindow::onHelpRebuild(){
-    if( _consoleProc || _monkeyPath.isEmpty() ) return;
+    if( _consoleProc || _blitzMaxPath.isEmpty() ) return;
 
     onFileSaveAll();
 
     QString cmd="\"${MONKEYPATH}/bin/makedocs"+HOST+"\"";
 
-    runCommand( cmd,0 );
+    runCommand( cmd,0, "" );
 
     initKeywords();
 
@@ -2628,14 +2762,15 @@ void MainWindow::on_actionLock_Target_triggered()
 
 }
 
-void MainWindow::on_actionLock_Target_toggled(bool arg1)
+void MainWindow::on_actionLock_Target_toggled(bool locked)
 {
-    if(arg1==true){
+    if (locked) {
         _targetsWidget->setEnabled(false);
+        _architecturesWidget->setEnabled(false);
         _configsWidget->setEnabled(false);
-    }
-    if(arg1==false){
+    } else {
         _targetsWidget->setEnabled(true);
+        _architecturesWidget->setEnabled(true);
         _configsWidget->setEnabled(true);
     }
 }
@@ -2645,7 +2780,7 @@ void MainWindow::on_webView_selectionChanged()
 
 }
 
-void MainWindow::on_docsDockWidget_allowedAreasChanged(const Qt::DockWidgetAreas &allowedAreas)
+void MainWindow::on_docsDockWidget_allowedAreasChanged(const Qt::DockWidgetAreas &/*allowedAreas*/)
 {
 
 }
@@ -2665,4 +2800,13 @@ void MainWindow::on_actionThemeLightTable_triggered()
 {
     Theme::set("lighttable");
     updateTheme();
+}
+
+
+QString MainWindow::getBMKPath() {
+    QString path(_blitzMaxPath + "/bin/bmk");
+#ifdef Q_OS_WIN
+    path += ".exe"
+#endif
+    return path;
 }

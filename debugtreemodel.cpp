@@ -9,9 +9,16 @@ See LICENSE.TXT for licensing terms.
 #include "debugtreemodel.h"
 #include "proc.h"
 
+enum DebugType {
+    DEBUG_NDEF = -1,
+    DEBUG_FUNC = 0,
+    DEBUG_VAR,
+    DEBUG_OBJ
+};
+
 class DebugItem : public QStandardItem{
 public:
-    DebugItem():_type(-1),_addr(0),_expanded( false ){
+    DebugItem():_type(DEBUG_NDEF),_expanded( false ){
         setEditable( false );
     }
 
@@ -19,12 +26,16 @@ public:
         return _type;
     }
 
-    void *address()const{
+    QString address()const{
         return _addr;
     }
 
     QString info()const{
         return _info;
+    }
+
+    void setInfo(QString & info) {
+        _info = info;
     }
 
     void setExpanded( bool expanded ){
@@ -35,34 +46,33 @@ public:
         return _expanded;
     }
 
-    void update( const QString &ctext ){
-        QString text=ctext;
-        _type=0;
-        _addr=0;
+    void update( const QString &ctext, const QString & file) {
+
+        QString txt=ctext;
+        _type=DEBUG_VAR;
         _info="";
-        if( text.startsWith("(") ){
-           _type=0;
-        }else if( text.startsWith("+") ){
-            _type=2;
-            text=text.mid( 1 );
-            int i=text.indexOf( ';' );
-            if( i!=-1 ){
-                _info=text.mid( i+1 );
-                text=text.left( i );
-            }
-        }else if( text.indexOf( "\"" )==-1 ){
-            int i=text.indexOf( "=@" );
-            if( i!=-1 ){
-                _type=3;
-                _addr=(void*)text.mid( i+2 ).toULongLong( 0,16 );
+        if( txt.startsWith("Function") ){
+           _type=DEBUG_FUNC;
+           _info = file;
+        }else if( txt.startsWith("Local") ){
+            _type=DEBUG_VAR;
+
+            if( txt.indexOf( "\"" )==-1 ){
+                int i=txt.indexOf( "=$" );
+                if( i!=-1 ){
+                   _type=DEBUG_OBJ;
+                   _addr=txt.mid( i+2 );
+                }
             }
         }
-        setText( text );
+        if (text() != txt) {
+            setText( txt );
+        }
     }
 
 private:
-    int _type;
-    void *_addr;
+    DebugType _type;
+    QString _addr;
     QString _info;
     bool _expanded;
 };
@@ -70,7 +80,7 @@ private:
 DebugTreeModel::DebugTreeModel( Process *proc,QObject *parent ):QStandardItemModel( parent ),_proc( proc ),_stopped( false ){
 }
 
-void DebugTreeModel::stop(){
+void DebugTreeModel::stop(QString & line){
 
     if( _stopped ) return;
 
@@ -82,37 +92,77 @@ void DebugTreeModel::stop(){
     //
     DebugItem *func=0;
     int n_funcs=0,n_vars=0;
+    QString file;
 
     QStack<DebugItem*> objs;
+
+    if (line == "Debug:" || line == "DebugStop:") {
+        // eat the input line
+        _proc->readLine( 1 );
+
+        _proc->writeLine("t");
+    }
 
     for(;;){
 
         QString text=_proc->readLine( 1 );
+
+        if (text.startsWith("~>")) {
+            text = text.mid(2);
+        }
+
         if( text.isEmpty() ) break;
 
-        if( text.startsWith( "+" ) ){
-            if( func ) func->setRowCount( n_vars );
-            func=dynamic_cast<DebugItem*>( root->child( n_funcs++ ) );
-            if( !func ){
-                func=new DebugItem;
-                root->appendRow( func );
-            }
-            func->update( text );
-            n_vars=0;
-        }else if( func ){
-            DebugItem *item=dynamic_cast<DebugItem*>( func->child( n_vars++ ) );
-            if( !item ){
-                item=new DebugItem;
-                func->appendRow( item );
-            }
-            item->update( text );
+        // end of debug scope
+        if (text == "}") {
+            continue;
+        }
 
-            if( item->type()==3 && item->address()!=0 && item->expanded() ){
+        // stack file/line
+        if (text.startsWith("@")) {
+            file = text.mid(1);
+            continue;
+        }
+
+        // local scope change
+        if (text.startsWith("Local <local>")) {
+
+            // set function file offset
+            if (func) {
+                func->setInfo(file);
+            }
+
+            continue;
+        }
+
+        if (text.startsWith("Function")) {
+            if( func ) func->setRowCount( n_vars );
+            n_vars = 0;
+            func = dynamic_cast<DebugItem*>( root->child( n_funcs++ ) );
+            if (!func) {
+                func = new DebugItem;
+                root->appendRow(func);
+            }
+
+            func->update(text, file);
+
+        } else if (func) {
+            DebugItem *item = dynamic_cast<DebugItem*>(func->child(n_vars++));
+
+            if (!item) {
+                item = new DebugItem;
+                func->appendRow(item);
+            }
+
+            item->update(text, file);
+
+            if (item->type()==DEBUG_OBJ && item->address()!=0 && item->expanded()) {
                 objs.push( item );
-            }else{
+            } else {
                 item->setRowCount(0);
             }
         }
+
     }
 
     if( func ) func->setRowCount( n_vars );
@@ -123,14 +173,23 @@ void DebugTreeModel::stop(){
 
         DebugItem *item=objs.pop();
 
-        _proc->writeLine( QString("@")+QString::number( (qulonglong)item->address(),16 ) );
+        _proc->writeLine( QString("D" + item->address() ) );
 
         int n_vars=0;
 
         for(;;){
 
             QString text=_proc->readLine( 1 );
+
+            if (text.startsWith("~>")) {
+                text = text.mid(2);
+            }
+
             if( text.isEmpty() ) break;
+
+            if (text.startsWith("ObjectDump@") || text == "}") {
+                continue;
+            }
 
             DebugItem *child=dynamic_cast<DebugItem*>( item->child( n_vars++ ) );
             if( !child ){
@@ -138,9 +197,9 @@ void DebugTreeModel::stop(){
                 item->appendRow( child );
             }
 
-            child->update( text );
+            child->update( text, "" );
 
-            if( child->type()==2 && child->address()!=0 && child->expanded() ){
+            if( child->type()==DEBUG_OBJ && child->expanded() ){
                 objs.push( child );
             }else{
                 child->setRowCount(0);
@@ -148,6 +207,9 @@ void DebugTreeModel::stop(){
         }
         item->setRowCount( n_vars );
     }
+
+
+    showFileLine( file );
 }
 
 void DebugTreeModel::run(){
@@ -185,21 +247,34 @@ void DebugTreeModel::onClicked( const QModelIndex &index ){
     DebugItem *item=dynamic_cast<DebugItem*>( itemFromIndex( index ) );
     if( !item ) return;
 
-    if( item->type()==2 ){
-        QString info=item->info();
+    if( item->type()==DEBUG_FUNC ){
+        showFileLine(item->info());
+/*        QString info=item->info();
         int i=info.lastIndexOf( '<' );
         if( i!=-1 && info.endsWith( '>' ) ){
+            int n = info.indexOf(',', i);
             QString path=info.left( i );
-            int line=info.mid( i+1,info.length()-i-2 ).toInt()-1;
+            int line=info.mid( i+1,n - i - 1 ).toInt()-1;
             emit showCode( path,line );
-        }
+        }*/
+    }
+}
+
+void DebugTreeModel::showFileLine(const QString &file) {
+    QString info=file;
+    int i=info.lastIndexOf( '<' );
+    if( i!=-1 && info.endsWith( '>' ) ){
+        int n = info.indexOf(',', i);
+        QString path=info.left( i );
+        int line=info.mid( i+1,n - i - 1 ).toInt()-1;
+        emit showCode( path,line );
     }
 }
 
 bool DebugTreeModel::hasChildren( const QModelIndex &parent )const{
 
     if( DebugItem *item=dynamic_cast<DebugItem*>( itemFromIndex( parent ) ) ){
-        return item->type()>1;
+        return item->type()==DEBUG_FUNC || item->type()==DEBUG_OBJ;
     }
 
     return QStandardItemModel::hasChildren( parent );
@@ -211,7 +286,7 @@ bool DebugTreeModel::canFetchMore( const QModelIndex &parent )const{
 
     if( DebugItem *item=dynamic_cast<DebugItem*>( itemFromIndex( parent ) ) ){
 
-        return item->type()==3 && item->address()!=0 && !item->expanded();
+        return item->type()==DEBUG_OBJ && !item->expanded();
     }
 
     return false;
@@ -225,19 +300,28 @@ void DebugTreeModel::fetchMore( const QModelIndex &parent ){
 
         int n_vars=0;
 
-        _proc->writeLine( QString("@")+QString::number( (qulonglong)item->address(),16 ) );
+        _proc->writeLine( QString("D" + item->address()) );
 
         for(;;){
 
             QString text=_proc->readLine( 1 );
+
+            if (text.startsWith("~>")) {
+                text = text.mid(2);
+            }
+
             if( text.isEmpty() ) break;
+
+            if (text.startsWith("ObjectDump@") || text == "}") {
+                continue;
+            }
 
             DebugItem *child=dynamic_cast<DebugItem*>( item->child( n_vars++ ) );
             if( !child ){
                 child=new DebugItem;
                 item->appendRow( child );
             }
-            child->update( text );
+            child->update( text, "" );
         }
 
         item->setRowCount( n_vars );

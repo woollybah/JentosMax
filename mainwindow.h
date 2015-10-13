@@ -10,6 +10,7 @@ See LICENSE.TXT for licensing terms.
 #define MAINWINDOW_H
 
 #include "std.h"
+#include <QProxyStyle>
 
 class CodeEditor;
 class ProjectTreeModel;
@@ -39,7 +40,7 @@ public:
     ~MainWindow();
 
     void cdebug( const QString &str );
-    static bool isValidMonkeyPath(const QString &path , QString &trans);
+    static bool isValidBlitzMaxPath(QString &path);
     void updateTheme();
 
 private:
@@ -69,12 +70,13 @@ private:
     void updateActions();
 
     void print(const QString &str , QString kind);
-    void runCommand( QString cmd,QWidget *fileWidget );
+    void runCommand(QString cmd, QWidget *fileWidget , QString message);
     void build( QString mode,QString pathmonkey);
 
     bool confirmQuit();
     void closeEvent( QCloseEvent *event );
 
+    QString getBMKPath();
 
 protected:
 
@@ -165,7 +167,7 @@ public slots:
     void onHelpAbout();
     void onHelpRebuild();
     void onHelpOnlineDocs();
-    void onHelpMonkeyHomepage();
+    void onHelpBlitzMaxHomepage();
 
     void onOpenCodeFile(const QString &file, const QString &folder, const int &lineNumber );
     void onDropFiles( const QStringList &list );
@@ -238,6 +240,8 @@ private slots:
 
     void on_actionThemeLightTable_triggered();
 
+    void onTargetChanged( int index );
+
 private:
 
 
@@ -251,10 +255,10 @@ private:
     QString _buildBmxCmd;
     QString _runBmxCmd;
 
-    static QString _monkeyPath, _transPath;
+    static QString _blitzMaxPath, _transPath;
     bool _isShowHelpInDock;
-    QString _buildMonkeyCmd;
-    QString _runMonkeyCmd;
+    QString _buildBlitzMaxCmd;
+    QString _runBlitzMaxCmd;
 
     QString _transVersion;
 
@@ -278,7 +282,7 @@ private:
     QMenu *_dirPopupMenu;
     QMenu *_filePopupMenu;
     QMenu *_fileImagePopupMenu;
-    QMenu *_fileMonkeyPopupMenu;
+    QMenu *_fileBlitzMaxPopupMenu;
     QMenu *_sourcePopupMenu;
     QMenu *_editorPopupMenu;
     QMenu *_usagesPopupMenu;
@@ -286,6 +290,7 @@ private:
     QLabel *_statusWidget;
 
     QComboBox *_targetsWidget;
+    QComboBox *_architecturesWidget;
     QComboBox *_configsWidget;
     QComboBox *_indexWidget;
 
@@ -293,6 +298,19 @@ private:
     int _lastHelpCursorPos;
 
 
+};
+
+// default font size on OS X is too big. We'll use a smaller size instead :-)
+class CustomProxyStyle : public QProxyStyle {
+public:
+#ifdef Q_OS_MAC
+    virtual void polish(QWidget * widget) {
+        QMenu* menu = dynamic_cast<QMenu*>(widget);
+        if (!menu && !widget->testAttribute(Qt::WA_MacNormalSize)) {
+            widget->setAttribute(Qt::WA_MacSmallSize);
+        }
+    }
+#endif
 };
 
 #endif // MAINWINDOW_H

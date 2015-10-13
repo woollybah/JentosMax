@@ -52,10 +52,20 @@ QString extractDir( const QString &path );
 
 QString extractExt( const QString &path );
 
+QString stripExt( const QString &path );
+
 bool removeDir( const QString &path );
 
 void replaceTabWidgetWidget( QTabWidget *tabWidget,int index,QWidget *widget );
 
 bool isUrl( const QString &path );
+
+QString blitzMaxPath(QString altPath);
+QString modulePath(QString modid);
+void enumModules(QString modid, QStringList & mods);
+QString moduleIdent(const QString modid);
+QString moduleSource(const QString modid);
+
+QString quote(QString &s);
 
 #endif // STD_H

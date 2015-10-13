@@ -89,7 +89,7 @@ int PrefsDialog::exec(){
 
     _ui->tabSizeWidget->setValue( _prefs->getInt( "tabSize" ) );
 
-    _ui->monkeyPathWidget->setText( _prefs->getString( "monkeyPath" ) );
+    _ui->blitzMaxPathWidget->setText( _prefs->getString( "blitzMaxPath" ) );
 
     _ui->checkBoxAutoformat->setChecked( _prefs->getBool( "codeAutoformat" ) );
     _ui->checkBoxUseSpaces->setChecked( _prefs->getBool( "codeTabUseSpaces" ) );
@@ -167,18 +167,17 @@ void PrefsDialog::onAnalyzerChanged() {
 }
 
 void PrefsDialog::onBrowseForPath() {
-    QString path = QFileDialog::getExistingDirectory( this,"Select Monkey directory","",QFileDialog::ShowDirsOnly|QFileDialog::DontResolveSymlinks );
+    QString path = QFileDialog::getExistingDirectory( this,"Select BlitzMax directory","",QFileDialog::ShowDirsOnly|QFileDialog::DontResolveSymlinks );
     if( path.isEmpty() ) return;
     path = fixPath( path );
-    QString trans;
-    if( MainWindow::isValidMonkeyPath(path, trans) ) {
-        _prefs->setValue( "monkeyPath",path );
-        _prefs->setValue( "transPath",trans );
-        _ui->monkeyPathWidget->setText( path );
+
+    if( MainWindow::isValidBlitzMaxPath(path) ) {
+        _prefs->setValue( "blitzMaxPath",path );
+        _ui->blitzMaxPathWidget->setText( path );
     }
     else {
-        QMessageBox::warning( this,"","Invalid Monkey Path!\nPlease, choose the root directory of Monkey." );
-        _prefs->setValue( "monkeyPath","" );
+        QMessageBox::warning( this,"","Invalid BlitzMax Path!\nPlease, choose the root directory of BlitzMax." );
+        _prefs->setValue( "blitzMaxPath","" );
     }
 }
 

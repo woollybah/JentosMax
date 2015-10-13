@@ -23,7 +23,6 @@
         <file>ui/tree_close.png</file>
         <file>ui/tree_open.png</file>
         <file>icons/Clear.png</file>
-        <file>code/class.png</file>
         <file>icons/Sort.png</file>
         <file>ui/chb.png</file>
         <file>ui/chb_.png</file>
@@ -122,5 +121,6 @@
         <file>tabwidgetdrop.h</file>
         <file>theme.cpp</file>
         <file>theme.h</file>
+        <file>code/type.png</file>
     </qresource>
 </RCC>

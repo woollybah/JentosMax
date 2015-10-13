@@ -51,7 +51,7 @@ public:
 
     bool isTxt(){ return _txt; }
     bool isCode(){ return _code; }
-    bool isMonkey(){ return _monkey; }
+    bool isBlitzMax(){ return _blitzMax; }
 
     void gotoLine( int line );
     void highlightLine(int line , Highlighting kind=HlCommon);
@@ -134,7 +134,7 @@ protected:
 
     void resizeEvent(QResizeEvent *e);
     void keyPressEvent( QKeyEvent *e );
-    void keyReleaseEvent( QKeyEvent *e );
+    void keyReleaseEvent(QKeyEvent *);
     void mouseMoveEvent(QMouseEvent *e);
     void mousePressEvent(QMouseEvent *e);
     void leaveEvent(QEvent *) {
@@ -151,7 +151,7 @@ private:
     //
     QString _path;
     QString _fileType, _fileName;
-    bool _txt, _code, _monkey;
+    bool _txt, _code, _blitzMax;
     int _modified;
     ListWidgetComplete *_lcomp;//autocomplete list
     CodeScope _scope;
@@ -183,7 +183,7 @@ public:
     enum Formats {
         FormatDefault, FormatIdentifier,
         FormatUserClass, FormatUserClassVar, FormatUserDecl,
-        FormatMonkeyClass,
+        FormatBlitzMaxClass,
         FormatKeyword, FormatParam, FormatNumber, FormatString, FormatComment
     };
     void setEnabled( bool value ) { _enabled = value; }
@@ -207,7 +207,7 @@ private:
     QColor _stringsColor;
     QColor _identifiersColor;
     QColor _keywordsColor;
-    QColor _monkeywordsColor;
+    QColor _blitzMaxwordsColor;
     QColor _userwordsColor, _userwordsVarColor, _userwordsDeclColor, _paramsColor;
     QColor _commentsColor;
     QColor _highlightColor;

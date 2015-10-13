@@ -52,7 +52,7 @@ RESOURCES += \
     resources.qrc \
     myresource.qrc
 
-TARGET = JentosIDE
+TARGET = JentosMax
 #OK, this seems to prevent latest Windows QtCreator from being able to run Ted (builds fine).
 #Solved by using qtcreator-2.4.1
 DESTDIR = jentos_exec
@@ -64,5 +64,5 @@ win32{
 mac{
 #        WTF..enabling this appears to *break* 10.6 compatibility!!!!!
 #        QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.6
-        ICON = ted.icns
+        ICON = bmx.icns
 }

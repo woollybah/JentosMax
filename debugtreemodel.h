@@ -19,7 +19,7 @@ class DebugTreeModel : public QStandardItemModel{
 public:
     DebugTreeModel( Process *proc,QObject *parent=0 );
 
-    void stop();
+    void stop(QString &line);
 
     void run();
     void step();
@@ -32,6 +32,8 @@ public:
     bool hasChildren( const QModelIndex &parent )const;
     bool canFetchMore( const QModelIndex &parent )const;
     void fetchMore( const QModelIndex &parent );
+
+    void showFileLine(const QString &file);
 
 public slots:
     void onClicked( const QModelIndex &index );

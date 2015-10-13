@@ -32,7 +32,6 @@ public:
     QVariant data( const QModelIndex &index,int role )const;
 
 private:
-
     int _current;
     QVector<QString> _dirs;
     QVector<QPersistentModelIndex> _projs;

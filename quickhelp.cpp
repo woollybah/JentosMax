@@ -40,15 +40,15 @@ bool QuickHelp::init( QString &monkeyPath ) {
         file0.close();
     }
     else {
-        text = "Void;Strict;Public;Private;Property;"
-            "Bool;Int;Float;String;Array;Object;Mod;Continue;Exit;"
-            "Include;Import;Module;Extern;"
+        text = "Strict;SuperStrict;Public;Private;"
+            "Byte;Short;Int;Long;Float;Double;Ptr;String;Object;Mod;Continue;Exit;"
+            "Include;Import;Module;Extern;ModuleInfo;"
             "New;Self;Super;Eachin;True;False;Null;Not;"
-            "Extends;Abstract;Final;Native;Select;Case;Default;"
-            "Const;Local;Global;Field;Method;Function;Class;Interface;Implements;"
-            "And;Or;Shl;Shr;End;If;Then;Else;Elseif;Endif;While;Wend;Repeat;Until;Forever;For;To;Step;Next;Return;Inline;"
-            "Try;Catch;Throw;Throwable;"
-            "Print;Error;Alias";
+            "Extends;Abstract;Final;Select;Case;Default;Rem;"
+            "Const;Local;Global;Field;Method;Function;Type;Interface;Implements;"
+            "And;Or;Shl;Shr;End;If;Then;Else;Elseif;Endif;While;Wend;Repeat;Until;Forever;For;To;Step;Next;Return;"
+            "Try;Catch;Throw;"
+            "EndModule;EndExtern;EndFor;EndWhile;EndRem;DebugStop;DebugLog;";
     }
 
     lines = text.split(';');
@@ -63,8 +63,8 @@ bool QuickHelp::init( QString &monkeyPath ) {
         h->isKeyword = true;
         if( topic=="Include"||topic=="Import"||topic=="Module"||topic=="Extern"||
                 topic=="New"||topic=="Eachin"||
-                topic=="Extends"||/*topic=="Abstract"||topic=="Final"||*/topic=="Native"||topic=="Select"||topic=="Case"||
-                topic=="Const"||topic=="Local"||topic=="Global"||topic=="Field"||topic=="Method"||topic=="Function"||topic=="Class"||topic=="Interface"||topic=="Implements"||
+                topic=="Extends"||/*topic=="Abstract"||topic=="Final"||*/topic=="Select"||topic=="Case"||
+                topic=="Const"||topic=="Local"||topic=="Global"||topic=="Field"||topic=="Method"||topic=="Function"||topic=="Type"||topic=="Interface"||topic=="Implements"||
                 topic=="And"||topic=="Or"||
                 topic=="Until"||topic=="For"||topic=="To"||topic=="Step"||
                 topic=="Catch"||topic=="Print" ) {
