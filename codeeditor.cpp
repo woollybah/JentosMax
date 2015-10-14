@@ -61,7 +61,7 @@ CodeEditor::CodeEditor( QWidget *parent ):QPlainTextEdit( parent ),_modified( 0 
 
     _editPosIndex = -1;
 
-    _lineNumberArea = new LineNumberArea(this, 60);
+    _lineNumberArea = new LineNumberArea(this);
 
     _prevCursorPos = _prevTextLen = _prevTextChangedPos = -1;
     _lcomp = 0;
@@ -83,7 +83,8 @@ CodeEditor::CodeEditor( QWidget *parent ):QPlainTextEdit( parent ),_modified( 0 
 
     flushExtraSels();
 
-    setViewportMargins(_lineNumberArea->maxwidth()-1, 0, 0, 0);
+    //setViewportMargins(_lineNumberArea->maxwidth()-1, 0, 0, 0);
+    updateLineNumberAreaWidth(0);
 
     setMouseTracking(true);
     setAcceptDrops(false);
@@ -102,6 +103,7 @@ bool CodeEditor::aucompIsVisible() {
 
 void CodeEditor::aucompProcess( CodeItem *item, bool forInheritance ) {
     QTextCursor c = textCursor();
+    c.joinPreviousEditBlock();
     QString text = c.block().text();
     int i0 = c.positionInBlock();
     int i = i0-1;
@@ -110,6 +112,7 @@ void CodeEditor::aucompProcess( CodeItem *item, bool forInheritance ) {
     }
     ++i;
     int bp = c.block().position();
+
     c.setPosition(bp+i);
     c.setPosition(bp+i0, QTextCursor::KeepAnchor );
     setTextCursor(c);
@@ -142,6 +145,7 @@ void CodeEditor::aucompProcess( CodeItem *item, bool forInheritance ) {
         c.setPosition( c.position()+d );
         setTextCursor(c);
     }
+    c.endEditBlock();
 }
 
 void CodeEditor::aucompShowList(bool process, bool inheritance ) {
@@ -354,8 +358,9 @@ void CodeEditor::cursorLineChanged() {
         return;
     }
 
-    if(isTxt())
+    if(isTxt()) {
         return;
+    }
     //autoformat line
     //replace # -> :Float, % -> :Int, etc...
     QTextCursor cursor = textCursor();
@@ -364,6 +369,7 @@ void CodeEditor::cursorLineChanged() {
     QString s = s0;
     bool repl = CodeAnalyzer::autoFormat(s);
     if( repl && s != s0 ) {
+        cursor.joinPreviousEditBlock();
         //store previous selection
         int sel1 = cursor.selectionStart();
         int sel2 = cursor.selectionEnd();
@@ -390,6 +396,7 @@ void CodeEditor::cursorLineChanged() {
         cursor.setPosition(begb.position()+sel1);
         cursor.setPosition(endb.position()+sel2, QTextCursor::KeepAnchor);
         setTextCursor( cursor );
+        cursor.endEditBlock();
     }
     updateSourceNavigationByCurrentScope();
 }
@@ -656,7 +663,9 @@ void CodeEditor::onCursorPositionChanged(){
     int len = document()->characterCount();
     if( len != _prevTextLen) {
         if(_prevCursorPos >= 0) {//not mark if it's 'open document' action
-            cursor.setPosition(_prevCursorPos);
+            if (_prevCursorPos < pos) {
+                cursor.setPosition(_prevCursorPos);
+            }
             QTextBlock block = cursor.block();
             while(block.isValid() && block.position() <= pos) {
                 BlockData *data = BlockData::data(block, true);
@@ -665,6 +674,7 @@ void CodeEditor::onCursorPositionChanged(){
             }
             cursor.setPosition(pos);
             editPosInsert(cursor.blockNumber());
+
         }
         _prevTextLen = len;
     }
@@ -810,16 +820,33 @@ void CodeEditor::onCodeTreeViewClicked( const QModelIndex &index ){
     }
 }
 
+int CodeEditor::lineNumberAreaWidth() {
+    int digits = 1;
+    int max = qMax(1, blockCount());
+    while (max >= 10) {
+        max /= 10;
+        ++digits;
+    }
+
+    int space = 44 + fontMetrics().width(QLatin1Char('9')) * digits;
+
+    return space;
+}
+
+void CodeEditor::updateLineNumberAreaWidth(int /* newBlockCount */) {
+    setViewportMargins(lineNumberAreaWidth(), 0, 0, 0);
+}
+
 void CodeEditor::onUpdateLineNumberArea(const QRect &rect, int dy) {
     if (dy) {
         _lineNumberArea->scroll(0, dy);
     }
     else {
-        _lineNumberArea->update(rect.x()+1, rect.y()+1, _lineNumberArea->maxwidth(), rect.height()-1+20);
+        _lineNumberArea->update(0, rect.y(), _lineNumberArea->width(), rect.height());
     }
 
     if (rect.contains(viewport()->rect())) {
-        _lineNumberArea->setGeometry(rect.x()+1,rect.y()+1, _lineNumberArea->maxwidth(),rect.height()-1+20);
+        updateLineNumberAreaWidth(0);
     }
 
 }
@@ -960,7 +987,7 @@ void CodeEditor::unfoldAll() {
 void CodeEditor::autoformatAll() {
     _highlighter->setEnabled(false);
     QTextCursor c = textCursor();
-    c.beginEditBlock();
+    c.joinPreviousEditBlock();
     int b = c.blockNumber();
     QTextBlock block = document()->firstBlock();
     while(block.isValid()) {
@@ -1091,9 +1118,12 @@ void CodeEditor::lineNumberAreaPaintEvent(QPaintEvent *event) {
     static QImage imgPlus2 = Theme::image("Unfold.png",2);
     static QImage imgMinus1 = Theme::image("Fold.png",1);
     static QImage imgMinus2 = Theme::image("Fold.png",2);
+    static QImage imgDebug1 = Theme::image("Debug.png",1);
+    static QImage imgDebug2 = Theme::image("Debug.png",2);
     QImage imgBookmark = (d ? imgBookmark1 : imgBookmark2);
     QImage imgPlus = (d ? imgPlus1 : imgPlus2);
     QImage imgMinus = (d ? imgMinus1 : imgMinus2);
+    QImage imgDebug = (d ? imgDebug1 : imgDebug2);
 
     QPainter painter(_lineNumberArea);
 
@@ -1109,13 +1139,15 @@ void CodeEditor::lineNumberAreaPaintEvent(QPaintEvent *event) {
     float top = contentOffset().y();//blockBoundingRect(block).y();
     //float top = blockBoundingGeometry(block).translated(contentOffset()).top();
     int width = _lineNumberArea->width();
-    int wd = 40;
+    int wd = width - 20;
 
     int areaHeight = rect().height();
     //qDebug()<<top;
     //return;
     int n = (areaHeight/bheight)+1;
     int i = 0;
+    int debugLocation = _lineNumberArea->debugLocation();
+    int dl = (bheight - imgDebug.height()) / 2;
     //
     while (block.isValid() && i < n) {
         //
@@ -1183,6 +1215,11 @@ void CodeEditor::lineNumberAreaPaintEvent(QPaintEvent *event) {
                 painter.drawImage(width-14, py+4, imgMinus );
             }
         }
+
+        if (debugLocation >= 0 && debugLocation == block.blockNumber()) {
+            painter.drawImage(4, py + dl, imgDebug);
+        }
+
         top += bheight;
         ++i;
         block = block.next();
@@ -1294,7 +1331,8 @@ void CodeEditor::mouseMoveEvent(QMouseEvent *e) {
 void CodeEditor::resizeEvent(QResizeEvent *e) {
     QPlainTextEdit::resizeEvent(e);
     if( _lineNumberArea) {
-        _lineNumberArea->setGeometry(1,_lineNumberArea->rect().y()+1, _lineNumberArea->width(),e->size().height()-1);
+        QRect cr = contentsRect();
+        _lineNumberArea->setGeometry(QRect(cr.left(), cr.top(), lineNumberAreaWidth(), cr.height()));
     }
 }
 
@@ -1632,6 +1670,7 @@ if(Prefs::prefs()->getBool("AutoBracket")==true){
             skip |= isIdent(c2);
         }
         if(!skip) {
+            cursor.joinPreviousEditBlock();
             if(k1)
                 insertPlainText("\"\"");
             else if(k2)
@@ -1641,6 +1680,7 @@ if(Prefs::prefs()->getBool("AutoBracket")==true){
             else if(k4)
                 insertPlainText("[]");
             cursor.setPosition(cursor.position()-1);
+            cursor.endEditBlock();
             setTextCursor(cursor);
             e->accept();
             return;
@@ -1758,6 +1798,7 @@ if(Prefs::prefs()->getBool("AutoBracket")==true){
             cursor.setPosition(begb.position()+sel1);
             cursor.setPosition(endb.position()+sel2, QTextCursor::KeepAnchor);
             cursor.endEditBlock();
+
             setTextCursor(cursor);
         }
         else {
@@ -1991,7 +2032,6 @@ if(Prefs::prefs()->getBool("AutoBracket")==true){
 }
 
 bool CodeEditor::findNext( const QString &findText,bool cased,bool wrap,bool backward ){
-
     QTextDocument::FindFlags flags=0;
     if( cased )
         flags |= QTextDocument::FindCaseSensitively;
@@ -2159,6 +2199,10 @@ QString CodeEditor::identAtCursor(bool fullWord) {
     return (isAlpha(s[0]) ? s : "");
 }
 
+void CodeEditor::setDebugLocation(int line) {
+    _lineNumberArea->setDebugLocation(line);
+}
+
 //***** Highlighter *****
 
 Highlighter::Highlighter( CodeEditor *editor ):QSyntaxHighlighter( editor->document() ),_editor( editor ){
@@ -2281,18 +2325,26 @@ void Highlighter::highlightBlock( const QString &ctext ){
                 //capitalize
                 //QString s1 = ctext.left(prev);
                 //QString s2 = ctext.mid(i);
+                /*
                 if(ident[0].isLower()) {
                     //qDebug()<<"capitalize: "+ident;
                     QTextCursor c = _editor->textCursor();
+                    //c.joinPreviousEditBlock();
+                    //bool state = _editor->blockSignals(true);
                     int p0 = c.position();
                     int p1 = block.position()+prev;
                     c.setPosition(p1);
                     c.setPosition(p1+1, QTextCursor::KeepAnchor);
-                    _editor->setTextCursor(c);
-                    _editor->insertPlainText(ident[0].toUpper());
+                    //_editor->setTextCursor(c);
+                    c.insertText(ident[0].toUpper());
+                    //_editor->insertPlainText();
                     c.setPosition(p0);
                     _editor->setTextCursor(c);
+                    //_editor->blockSignals(state);
+                    //c.endEditBlock();
+
                 }
+                */
             }
             else {
                 CodeItem *item = CodeAnalyzer::findInScope(block, i);

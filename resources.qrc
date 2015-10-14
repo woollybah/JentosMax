@@ -122,5 +122,8 @@
         <file>theme.cpp</file>
         <file>theme.h</file>
         <file>code/type.png</file>
+        <file>icons/dark/Debug.png</file>
+        <file>icons/light/Debug.png</file>
+        <file>icons/circle/Debug.png</file>
     </qresource>
 </RCC>

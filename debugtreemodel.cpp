@@ -267,7 +267,7 @@ void DebugTreeModel::showFileLine(const QString &file) {
         int n = info.indexOf(',', i);
         QString path=info.left( i );
         int line=info.mid( i+1,n - i - 1 ).toInt()-1;
-        emit showCode( path,line );
+        emit showDebugCode( path,line );
     }
 }
 

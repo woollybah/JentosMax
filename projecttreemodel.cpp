@@ -9,6 +9,10 @@ See LICENSE.TXT for licensing terms.
 #include "projecttreemodel.h"
 
 ProjectTreeModel::ProjectTreeModel(QObject *parent ):QFileSystemModel( parent ),_current(-1){
+    QStringList filters;
+    filters << "*.bmx" << "*.c" << "*.cpp" << "*.cc" << "*.h" << "*.hh" << "*.lua" << "*.bmk";
+
+    setNameFilters(filters);
 }
 
 bool ProjectTreeModel::addProject( const QString &dir ){

@@ -72,11 +72,14 @@ private:
     void print(const QString &str , QString kind);
     void runCommand(QString cmd, QWidget *fileWidget , QString message);
     void build( QString mode,QString pathmonkey);
+    void buildModules(bool fullBuild);
 
     bool confirmQuit();
     void closeEvent( QCloseEvent *event );
 
     QString getBMKPath();
+    QString getPlatform();
+    QString getArchitecture();
 
 protected:
 
@@ -210,6 +213,7 @@ private slots:
     void onTextChanged();
     void onCursorPositionChanged();
     void onShowCode(const QString &path, int line , bool error=false);
+    void onShowDebugCode(const QString &path, int line);
     void onShowCode( const QString &path,int pos,int len );
 
     void onProcStdout();

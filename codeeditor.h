@@ -101,6 +101,10 @@ public:
     QString findUsages(QTreeWidget *tree);
     void replaceInRange(int from, int to, const QString &text);
 
+    void setDebugLocation(int line);
+
+    int lineNumberAreaWidth();
+
 public slots:
 
     void undo();
@@ -122,6 +126,7 @@ private slots:
     void onCompleteChangeItem(QListWidgetItem *current, QListWidgetItem *previous);
     void onCompleteFocusOut();
     void onUpdateLineNumberArea(const QRect &, int);
+    void updateLineNumberAreaWidth(int newBlockCount);
 
 signals:
     void keyEscapePressed();
@@ -306,17 +311,22 @@ private:
 class LineNumberArea : public QWidget {
 public:
 
-    LineNumberArea(CodeEditor *editor, int width) : QWidget(editor),_wdth(width) {
+    LineNumberArea(CodeEditor *editor) : QWidget(editor),_debugLocation(-1) {
         _codeEditor = editor;
     }
 
-    int sizeHint() { return _wdth; }
+    QSize sizeHint() const Q_DECL_OVERRIDE {
+        return QSize(_codeEditor->lineNumberAreaWidth(), 0);
+    }
 
-    int maxwidth() { return _wdth; }
+    //int maxwidth() { return _width; }
 
     void pressed(int left, int right) { _pressedPosLeft = left; _pressedPosRight = right; }
     int pressedLeft() { return _pressedPosLeft; }
     int pressedRight() { return _pressedPosRight; }
+
+    int debugLocation() { return _debugLocation; }
+    void setDebugLocation(int location) { _debugLocation = location; }
 
 protected:
     void paintEvent(QPaintEvent *event) {
@@ -341,8 +351,10 @@ protected:
 
 private:
     CodeEditor *_codeEditor;
-    int _wdth;
+    //int _width;
     int _pressedPosLeft, _pressedPosRight;
+
+    int _debugLocation;
 };
 
 

@@ -1561,6 +1561,10 @@ void MainWindow::onProjectMenu( const QPoint &pos ){
 
         _findInFilesDialog->raise();
 
+    } else if (action == _ui->actionBuildModules) {
+        buildModules(false);
+    } else if (action == _ui->actionRebuildAllModules) {
+        buildModules(true);
     }
 }
 
@@ -1630,6 +1634,19 @@ void MainWindow::onShowCode( const QString &path, int line, bool error ){
 
         editor->gotoLine( line );
         editor->highlightLine( line, (error ? CodeEditor::HlError : CodeEditor::HlCommon) );
+        //
+        if( editor==_codeEditor ) editor->setFocus( Qt::OtherFocusReason );
+    }
+}
+
+void MainWindow::onShowDebugCode( const QString &path, int line ){
+    //qDebug()<<"onShowCode";
+    if( CodeEditor *editor=qobject_cast<CodeEditor*>( openFile( path,true ) ) ){
+        //
+
+        editor->gotoLine( line );
+        editor->highlightLine( line, CodeEditor::HlCommon );
+        editor->setDebugLocation(line);
         //
         if( editor==_codeEditor ) editor->setFocus( Qt::OtherFocusReason );
     }
@@ -1822,7 +1839,7 @@ void MainWindow::onProcStderr(){
             raise();
 
             _debugTreeModel=new DebugTreeModel( _consoleProc );
-            connect( _debugTreeModel,SIGNAL(showCode(QString,int)),SLOT(onShowCode(QString,int)) );
+            connect( _debugTreeModel,SIGNAL(showDebugCode(QString,int)),SLOT(onShowDebugCode(QString,int)) );
 
             _ui->debugTreeView->setModel( _debugTreeModel );
             connect( _ui->debugTreeView,SIGNAL(clicked(const QModelIndex&)),_debugTreeModel,SLOT(onClicked(const QModelIndex&)) );
@@ -1866,6 +1883,14 @@ void MainWindow::onProcFinished(){
         _ui->debugTreeView->setModel( 0 );
         delete _debugTreeModel;
         _debugTreeModel=0;
+
+        // tidy up debug indicators
+        for (int i=0; i < _mainTabWidget->count(); ++i) {
+            CodeEditor * editor = qobject_cast<CodeEditor*>( _mainTabWidget->widget( i ) );
+            if (editor) {
+                editor->setDebugLocation(-1);
+            }
+        }
     }
 
     if( _consoleProc ){
@@ -1891,7 +1916,7 @@ void MainWindow::build( QString mode, QString pathmonkey){
     }
 
     QString cmd;
-    QString msg = "Buillding: "+ stripDir(filePath);
+    QString msg = "Building: "+ stripDir(filePath);
 
 
     if( editor->fileType()=="bmx" ){
@@ -1902,31 +1927,7 @@ void MainWindow::build( QString mode, QString pathmonkey){
         cmd += getBMKPath();
 
         cmd += " makeapp";
-//        if( mode=="run" ){
-//            if(pathmonkey.endsWith("run")){
 
-//                cmd="\"${MONKEYPATH}/bin/"+_transPath+"\" -target=${TARGET} -config=${CONFIG} -run \"${FILEPATH}\"";
-
-//            }else {
-
-//                cmd="\"${MONKEYPATH}/bin/"+_transPath+"\" -target=${TARGET} -config=${CONFIG} -run "+pathmonkey;
-//            }
-//        }else if( mode=="build" ){
-
-//            if(pathmonkey.endsWith("run")){
-//                 cmd="\"${MONKEYPATH}/bin/"+_transPath+"\" -target=${TARGET} -config=${CONFIG} \"${FILEPATH}\"";
-
-//            }else {
-//                 cmd="\"${MONKEYPATH}/bin/"+_transPath+"\" -target=${TARGET} -config=${CONFIG} "+pathmonkey;
-//            }
-
-//        }else if( mode=="update" ){
-//            cmd="\"${MONKEYPATH}/bin/"+_transPath+"\" -target=${TARGET} -config=${CONFIG} -update \"${FILEPATH}\"";
-//            msg="Updating: "+filePath+"...";
-//        }else if( mode=="check" ){
-//            cmd="\"${MONKEYPATH}/bin/"+_transPath+"\" -target=${TARGET} -config=${CONFIG} -check \"${FILEPATH}\"";
-//            msg="Checking: "+filePath+"...";
-//        }
         if ( mode =="run" ) {
             cmd += " -x";
         }
@@ -1960,9 +1961,69 @@ void MainWindow::build( QString mode, QString pathmonkey){
             cmd += " -v";
         }
 
+        QString platform = getPlatform();
+
+        if (!platform.isEmpty()) {
+            cmd += " -l " + platform;
+        }
+
+        QString architecture = getArchitecture();
+
+        if (!architecture.isEmpty()) {
+            cmd += " -g " + architecture;
+        }
+
         cmd += " -o " + quote(out) + " ";
 
         cmd += quote(filePath);
+    }
+
+    if( !cmd.length() ) return;
+
+    onFileSaveAll();
+
+    statusBar()->showMessage( msg );
+
+    runCommand( cmd,editor, msg );
+}
+
+void MainWindow::buildModules(bool fullBuild) {
+
+    CodeEditor *editor = (_lockedEditor ? _lockedEditor : _codeEditor);
+
+    QString cmd;
+    QString msg = "Building Modules";
+
+
+    cmd += getBMKPath();
+
+    cmd += " makemods";
+
+    // full build ?
+    if (fullBuild) {
+        cmd += " -a";
+    }
+
+    // threaded build ?
+    if (_ui->actionThreadedBuild->isChecked()) {
+        cmd += " -h";
+    }
+
+    // verbose build?
+    if (_ui->actionVerboseBuild->isChecked()) {
+        cmd += " -v";
+    }
+
+    QString platform = getPlatform();
+
+    if (!platform.isEmpty()) {
+        cmd += " -l " + platform;
+    }
+
+    QString architecture = getArchitecture();
+
+    if (!architecture.isEmpty()) {
+        cmd += " -g " + architecture;
     }
 
     if( !cmd.length() ) return;
@@ -2459,15 +2520,13 @@ void MainWindow::onHelpQuickHelp(){
 }
 
 void MainWindow::onHelpAbout(){
-    QString href = "https://github.com/EnkiEA/Jentos_IDE";
-    QString APP_ABOUT = "<html><head><style>a{color:#CC8030;}</style></head><body bgcolor2='#ff3355'><b>"APP_NAME"</b> is a powefull code editor for the Monkey programming language.<br>"
-            "Based on Ted V"TED_VERSION".<br> This binary is Luis Francisco ( twitter @crearmijuego ) fork <br>Please send bug reports to him on monkey-x.com<br>"
+    QString href = "https://github.com/woollybah/JentosMax";
+    QString APP_ABOUT = "<html><head><style>a{color:#CC8030;}</style></head><body bgcolor2='#ff3355'><b>"APP_NAME"</b> is a code editor for BlitzMax.<br>"
+            "Based on Ted V"TED_VERSION" and Jentos IDE.<br> Please report issues at <a href='https://github.com/woollybah/JentosMax/issues'>GitHub>/a>.<br>"
             "Visit <a href='"+href+"'>"+href+"</a> for more information.<br><br>"
-            "Version: "APP_VERSION+"<br>Trans: "+_transVersion+"<br>Qt: "_STRINGIZE(QT_VERSION)+"<br><br>"
-            "Jentos is free and always be free.<br>But you may support engor/nerobot via <a href=\"https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=RGCTKTP8H3CNE\">donation</a>.<br>"
-
+            "Version: "APP_VERSION+"<br><br>Qt: "_STRINGIZE(QT_VERSION)+"<br><br>"
             "</body></html>";
-    QMessageBox::information( this, "About", APP_ABOUT );
+    QMessageBox::information( this, tr("About"), APP_ABOUT );
 }
 
 void MainWindow::onShowHelp( const QString &topic ) {
@@ -2809,4 +2868,65 @@ QString MainWindow::getBMKPath() {
     path += ".exe"
 #endif
     return path;
+}
+
+QString MainWindow::getPlatform() {
+    QString platform;
+
+    int index = _targetsWidget->currentIndex();
+
+    switch (index) {
+    case 0:
+        platform = "win32";
+        break;
+    case 1:
+        platform = "linux";
+        break;
+    case 2:
+        platform = "macos";
+        break;
+    case 3:
+        platform = "raspberrypi";
+        break;
+    case 4:
+        platform = "android";
+        break;
+    case 5:
+        platform = "ios";
+        break;
+    case 6:
+        platform = "emscripten";
+        break;
+
+    }
+
+    return platform;
+}
+
+QString MainWindow::getArchitecture() {
+    QString arch;
+
+    QString text = _architecturesWidget->currentText();
+
+    if (text == tr("x86")) {
+        arch = "x86";
+    } else if (text==tr("x64")) {
+        arch = "x64";
+    } else if (text==tr("ARM")) {
+        arch = "arm";
+    } else if (text==tr("ARMeabi v5")) {
+        arch = "armeabi";
+    } else if (text==tr("ARMeabi v7a")) {
+        arch = "armeabiv7a";
+    } else if (text==tr("ARM64 v8a")) {
+        arch = "arm64v8a";
+    } else if (text==tr("ARMv7")) {
+        arch = "armv7";
+    } else if (text==tr("ARM64")) {
+        arch = "arm64";
+    } else if (text==tr("js")) {
+        arch = "js";
+    }
+
+    return arch;
 }

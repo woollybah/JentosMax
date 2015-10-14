@@ -39,7 +39,7 @@ public slots:
     void onClicked( const QModelIndex &index );
 
 signals:
-    void showCode( const QString &path,int line );
+    void showDebugCode( const QString &path,int line );
 
 private:
     Process *_proc;

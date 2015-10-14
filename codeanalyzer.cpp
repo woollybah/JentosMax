@@ -1669,202 +1669,203 @@ bool CodeAnalyzer::autoFormat( QString &s, bool force ) {
     static QStringList *sFrom = 0, *sTo = 0;
     static int cnt = 0;
 
-    QString snippetmojox;
-    snippetmojox += "Import mojo\n";
-    snippetmojox += "\n";
-    snippetmojox += "Class {{Xname}} Extends App\n";
-    snippetmojox += "\n";
-    snippetmojox += "<---->Method OnCreate()\n";
-    snippetmojox += "<----....>SetUpdateRate 30\n";
-    snippetmojox += "<---->End\n";
-    snippetmojox += "\n";
-    snippetmojox += "<---->Method OnUpdate()\n";
-    snippetmojox += "\n";
-    snippetmojox += "<---->End\n";
-    snippetmojox += "\n";
-    snippetmojox += "<---->Method OnRender()\n";
-    snippetmojox += "<----....>Cls\n";
-    snippetmojox += "<----....>DrawText(\"Welcome Monkey\",302,240)\n";
-    snippetmojox += "<---->End\n";
-    snippetmojox += "\n";
-    snippetmojox += "End\n";
-    snippetmojox += "\n";
-    snippetmojox += "Function Main()\n";
-    snippetmojox += "<---->New {{Xname}}()\n";
-    snippetmojox += "End\n";
-
-
-    QString snippetmojoxstrict;
-    snippetmojoxstrict += "Strict\n";
-    snippetmojoxstrict += "\n";
-    snippetmojoxstrict += "Import mojo\n";
-    snippetmojoxstrict += "\n";
-    snippetmojoxstrict += "Class {{Xname}} Extends App\n";
-    snippetmojoxstrict += "\n";
-    snippetmojoxstrict += "<---->Method OnCreate:Int()\n";
-    snippetmojoxstrict += "<----....>SetUpdateRate 30\n";
-    snippetmojoxstrict += "<----....>Return 0\n";
-    snippetmojoxstrict += "<---->End\n";
-    snippetmojoxstrict += "\n";
-    snippetmojoxstrict += "<---->Method OnUpdate:Int()\n";
-    snippetmojoxstrict += "\n";
-    snippetmojoxstrict += "<----....>Return 0\n";
-    snippetmojoxstrict += "<---->End\n";
-    snippetmojoxstrict += "\n";
-    snippetmojoxstrict += "<---->Method OnRender:Int()\n";
-    snippetmojoxstrict += "<----....>Cls\n";
-    snippetmojoxstrict += "<----....>DrawText(\"Welcome Monkey\",302,240)\n";
-    snippetmojoxstrict += "<----....>Return 0\n";
-    snippetmojoxstrict += "<---->End\n";
-    snippetmojoxstrict += "\n";
-    snippetmojoxstrict += "End\n";
-    snippetmojoxstrict += "\n";
-    snippetmojoxstrict += "Function Main:Int()\n";
-    snippetmojoxstrict += "<---->New {{Xname}}()\n";
-    snippetmojoxstrict += "<---->Return 0\n";
-    snippetmojoxstrict += "End\n";
-
-
-    QString snippetmethodname;
-    snippetmethodname += "<---->Method {{Xname}}\n";
-    snippetmethodname += "\n";
-    snippetmethodname += "<---->End";
-
-    QString snippetmethodnamestrictVoid;
-    snippetmethodnamestrictVoid += "<---->Method {{Xname}}:Void()\n";
-    snippetmethodnamestrictVoid += "\n";
-    snippetmethodnamestrictVoid += "<---->End";
-
-    QString snippetmethodnamestrictInt;
-    snippetmethodnamestrictInt += "<---->Method {{Xname}}:Int()\n";
-    snippetmethodnamestrictInt += "\n";
-    snippetmethodnamestrictInt += "<----....>Return 0\n";
-    snippetmethodnamestrictInt += "<---->End";
-
-    QString snippetmethodnamestrictField;
-    snippetmethodnamestrictField += "<---->Method {{Xname}}:Float()\n";
-    snippetmethodnamestrictField += "\n";
-    snippetmethodnamestrictField += "<----....>Return 0\n";
-    snippetmethodnamestrictField += "<---->End";
-
-    QString snippetmethodnamestrictString;
-    snippetmethodnamestrictString += "<---->Method {{Xname}}:String()\n";
-    snippetmethodnamestrictString += "\n";
-    snippetmethodnamestrictString += "<----....>Return \"\"\n";
-    snippetmethodnamestrictString += "<---->End";
-
-    QString snippetmethodnamestrictBool;
-    snippetmethodnamestrictBool += "<---->Method {{Xname}}:Bool()\n";
-    snippetmethodnamestrictBool += "\n";
-    snippetmethodnamestrictBool += "<----....>Return False\n";
-    snippetmethodnamestrictBool += "<---->End";
-
-    QString snippetclasename;
-    snippetclasename += "Type {{Xname}}\n";
-    snippetclasename += "\n";
-    snippetclasename += "End Type\n";
-
-    //key down
-    QString snippetkeydowndireccional;
-    snippetkeydowndireccional += "<----....>If KeyDown(KEY_LEFT)\n";
-    snippetkeydowndireccional += "\n";
-    snippetkeydowndireccional += "<----....>End\n";
-    snippetkeydowndireccional += "\n";
-    snippetkeydowndireccional += "<----....>If KeyDown(KEY_RIGHT)\n";
-    snippetkeydowndireccional += "\n";
-    snippetkeydowndireccional += "<----....>End\n";
-    snippetkeydowndireccional += "\n";
-    snippetkeydowndireccional += "<----....>If KeyDown(KEY_UP)\n";
-    snippetkeydowndireccional += "\n";
-    snippetkeydowndireccional += "<----....>End\n";
-    snippetkeydowndireccional += "\n";
-    snippetkeydowndireccional += "<----....>If KeyDown(KEY_DOWN)\n";
-    snippetkeydowndireccional += "\n";
-    snippetkeydowndireccional += "<----....>End\n";
-
-    QString snippetkeydownkey;
-    snippetkeydownkey += "<----....>If KeyDown(KEY_{{Xname}})\n";
-    snippetkeydownkey += "\n";
-    snippetkeydownkey += "<----....>End\n";
-
-    // key hit
-    QString snippetkeyhitdireccional;
-    snippetkeyhitdireccional += "<----....>If KeyHit(KEY_LEFT)\n";
-    snippetkeyhitdireccional += "\n";
-    snippetkeyhitdireccional += "<----....>End\n";
-    snippetkeyhitdireccional += "\n";
-    snippetkeyhitdireccional += "<----....>If KeyHit(KEY_RIGHT)\n";
-    snippetkeyhitdireccional += "\n";
-    snippetkeyhitdireccional += "<----....>End\n";
-    snippetkeyhitdireccional += "\n";
-    snippetkeyhitdireccional += "<----....>If KeyHit(KEY_UP)\n";
-    snippetkeyhitdireccional += "\n";
-    snippetkeyhitdireccional += "<----....>End\n";
-    snippetkeyhitdireccional += "\n";
-    snippetkeyhitdireccional += "<----....>If KeyHit(KEY_DOWN)\n";
-    snippetkeyhitdireccional += "\n";
-    snippetkeyhitdireccional += "<----....>End\n";
-
-    QString snippetkeyhitkey;
-    snippetkeyhitkey += "<----....>If KeyHit(KEY_{{Xname}})\n";
-    snippetkeyhitkey += "\n";
-    snippetkeyhitkey += "<----....>End\n";
-
-    QString snippetfieldlist;
-    snippetfieldlist += "<---->Field {{Xnameminuscula}}s:List<{{Xname}}> = New List<{{Xname}}>\n";
-
-    QString snippetlocallist;
-    snippetlocallist += "<---->Local {{Xnameminuscula}}s:List<{{Xname}}> = New List<{{Xname}}>\n";
-
-    QString snippetForEachin;
-    snippetForEachin += "<---->For Local {{Xnameminuscula}}:Type = Eachin {{Xname}}\n";
-    snippetForEachin += "<----....>\'Statements\n";
-    snippetForEachin += "<---->Next\n";
-
-    QString snippetlvec2df;
-    snippetlvec2df += "Class Vec2Df\n";
-    snippetlvec2df += "<---->Field x:Float\n";
-    snippetlvec2df += "<---->Field y:Float\n";
-    snippetlvec2df += "\n";
-    snippetlvec2df += "<---->Method New(x:Float = 0, y:Float = 0)\n";
-    snippetlvec2df += "<----....>Set(x, y)\n";
-    snippetlvec2df += "<---->End\n";
-    snippetlvec2df += "<---->Method Set:Void(x:Float, y:Float)\n";
-    snippetlvec2df += "<----....>Self.x = x\n";
-    snippetlvec2df += "<----....>Self.y = y\n";
-    snippetlvec2df += "<---->End\n";
-    snippetlvec2df += "End";
-
-    QString snippetlvec2di;
-    snippetlvec2di += "Class Vec2Di\n";
-    snippetlvec2di += "<---->Field x:Int\n";
-    snippetlvec2di += "<---->Field y:Int\n";
-    snippetlvec2di += "\n";
-    snippetlvec2di += "<---->Method New(x:Int = 0, y:Int = 0)\n";
-    snippetlvec2di += "<----....>Set(x, y)\n";
-    snippetlvec2di += "<---->End\n";
-    snippetlvec2di += "<---->Method Set:Void(x:Int, y:Int)\n";
-    snippetlvec2di += "<----....>Self.x = x\n";
-    snippetlvec2di += "<----....>Self.y = y\n";
-    snippetlvec2di += "<---->End\n";
-    snippetlvec2di += "End";
 
 
     if(!sFrom) {
+        QString snippetmojox;
+        snippetmojox += "Import mojo\n";
+        snippetmojox += "\n";
+        snippetmojox += "Class {{Xname}} Extends App\n";
+        snippetmojox += "\n";
+        snippetmojox += "<---->Method OnCreate()\n";
+        snippetmojox += "<----....>SetUpdateRate 30\n";
+        snippetmojox += "<---->End\n";
+        snippetmojox += "\n";
+        snippetmojox += "<---->Method OnUpdate()\n";
+        snippetmojox += "\n";
+        snippetmojox += "<---->End\n";
+        snippetmojox += "\n";
+        snippetmojox += "<---->Method OnRender()\n";
+        snippetmojox += "<----....>Cls\n";
+        snippetmojox += "<----....>DrawText(\"Welcome Monkey\",302,240)\n";
+        snippetmojox += "<---->End\n";
+        snippetmojox += "\n";
+        snippetmojox += "End\n";
+        snippetmojox += "\n";
+        snippetmojox += "Function Main()\n";
+        snippetmojox += "<---->New {{Xname}}()\n";
+        snippetmojox += "End\n";
+
+
+        QString snippetmojoxstrict;
+        snippetmojoxstrict += "Strict\n";
+        snippetmojoxstrict += "\n";
+        snippetmojoxstrict += "Import mojo\n";
+        snippetmojoxstrict += "\n";
+        snippetmojoxstrict += "Class {{Xname}} Extends App\n";
+        snippetmojoxstrict += "\n";
+        snippetmojoxstrict += "<---->Method OnCreate:Int()\n";
+        snippetmojoxstrict += "<----....>SetUpdateRate 30\n";
+        snippetmojoxstrict += "<----....>Return 0\n";
+        snippetmojoxstrict += "<---->End\n";
+        snippetmojoxstrict += "\n";
+        snippetmojoxstrict += "<---->Method OnUpdate:Int()\n";
+        snippetmojoxstrict += "\n";
+        snippetmojoxstrict += "<----....>Return 0\n";
+        snippetmojoxstrict += "<---->End\n";
+        snippetmojoxstrict += "\n";
+        snippetmojoxstrict += "<---->Method OnRender:Int()\n";
+        snippetmojoxstrict += "<----....>Cls\n";
+        snippetmojoxstrict += "<----....>DrawText(\"Welcome Monkey\",302,240)\n";
+        snippetmojoxstrict += "<----....>Return 0\n";
+        snippetmojoxstrict += "<---->End\n";
+        snippetmojoxstrict += "\n";
+        snippetmojoxstrict += "End\n";
+        snippetmojoxstrict += "\n";
+        snippetmojoxstrict += "Function Main:Int()\n";
+        snippetmojoxstrict += "<---->New {{Xname}}()\n";
+        snippetmojoxstrict += "<---->Return 0\n";
+        snippetmojoxstrict += "End\n";
+
+
+        QString snippetmethodname;
+        snippetmethodname += "<---->Method {{Xname}}\n";
+        snippetmethodname += "\n";
+        snippetmethodname += "<---->End";
+
+        QString snippetmethodnamestrictVoid;
+        snippetmethodnamestrictVoid += "<---->Method {{Xname}}:Void()\n";
+        snippetmethodnamestrictVoid += "\n";
+        snippetmethodnamestrictVoid += "<---->End";
+
+        QString snippetmethodnamestrictInt;
+        snippetmethodnamestrictInt += "<---->Method {{Xname}}:Int()\n";
+        snippetmethodnamestrictInt += "\n";
+        snippetmethodnamestrictInt += "<----....>Return 0\n";
+        snippetmethodnamestrictInt += "<---->End";
+
+        QString snippetmethodnamestrictField;
+        snippetmethodnamestrictField += "<---->Method {{Xname}}:Float()\n";
+        snippetmethodnamestrictField += "\n";
+        snippetmethodnamestrictField += "<----....>Return 0\n";
+        snippetmethodnamestrictField += "<---->End";
+
+        QString snippetmethodnamestrictString;
+        snippetmethodnamestrictString += "<---->Method {{Xname}}:String()\n";
+        snippetmethodnamestrictString += "\n";
+        snippetmethodnamestrictString += "<----....>Return \"\"\n";
+        snippetmethodnamestrictString += "<---->End";
+
+        QString snippetmethodnamestrictBool;
+        snippetmethodnamestrictBool += "<---->Method {{Xname}}:Bool()\n";
+        snippetmethodnamestrictBool += "\n";
+        snippetmethodnamestrictBool += "<----....>Return False\n";
+        snippetmethodnamestrictBool += "<---->End";
+
+        QString snippetclasename;
+        snippetclasename += "Type {{Xname}}\n";
+        snippetclasename += "\n";
+        snippetclasename += "End Type\n";
+
+        //key down
+        QString snippetkeydowndireccional;
+        snippetkeydowndireccional += "<----....>If KeyDown(KEY_LEFT)\n";
+        snippetkeydowndireccional += "\n";
+        snippetkeydowndireccional += "<----....>End\n";
+        snippetkeydowndireccional += "\n";
+        snippetkeydowndireccional += "<----....>If KeyDown(KEY_RIGHT)\n";
+        snippetkeydowndireccional += "\n";
+        snippetkeydowndireccional += "<----....>End\n";
+        snippetkeydowndireccional += "\n";
+        snippetkeydowndireccional += "<----....>If KeyDown(KEY_UP)\n";
+        snippetkeydowndireccional += "\n";
+        snippetkeydowndireccional += "<----....>End\n";
+        snippetkeydowndireccional += "\n";
+        snippetkeydowndireccional += "<----....>If KeyDown(KEY_DOWN)\n";
+        snippetkeydowndireccional += "\n";
+        snippetkeydowndireccional += "<----....>End\n";
+
+        QString snippetkeydownkey;
+        snippetkeydownkey += "<----....>If KeyDown(KEY_{{Xname}})\n";
+        snippetkeydownkey += "\n";
+        snippetkeydownkey += "<----....>End\n";
+
+        // key hit
+        QString snippetkeyhitdireccional;
+        snippetkeyhitdireccional += "<----....>If KeyHit(KEY_LEFT)\n";
+        snippetkeyhitdireccional += "\n";
+        snippetkeyhitdireccional += "<----....>End\n";
+        snippetkeyhitdireccional += "\n";
+        snippetkeyhitdireccional += "<----....>If KeyHit(KEY_RIGHT)\n";
+        snippetkeyhitdireccional += "\n";
+        snippetkeyhitdireccional += "<----....>End\n";
+        snippetkeyhitdireccional += "\n";
+        snippetkeyhitdireccional += "<----....>If KeyHit(KEY_UP)\n";
+        snippetkeyhitdireccional += "\n";
+        snippetkeyhitdireccional += "<----....>End\n";
+        snippetkeyhitdireccional += "\n";
+        snippetkeyhitdireccional += "<----....>If KeyHit(KEY_DOWN)\n";
+        snippetkeyhitdireccional += "\n";
+        snippetkeyhitdireccional += "<----....>End\n";
+
+        QString snippetkeyhitkey;
+        snippetkeyhitkey += "<----....>If KeyHit(KEY_{{Xname}})\n";
+        snippetkeyhitkey += "\n";
+        snippetkeyhitkey += "<----....>End\n";
+
+        QString snippetfieldlist;
+        snippetfieldlist += "<---->Field {{Xnameminuscula}}s:List<{{Xname}}> = New List<{{Xname}}>\n";
+
+        QString snippetlocallist;
+        snippetlocallist += "<---->Local {{Xnameminuscula}}s:List<{{Xname}}> = New List<{{Xname}}>\n";
+
+        QString snippetForEachin;
+        snippetForEachin += "<---->For Local {{Xnameminuscula}}:Type = Eachin {{Xname}}\n";
+        snippetForEachin += "<----....>\'Statements\n";
+        snippetForEachin += "<---->Next\n";
+
+        QString snippetlvec2df;
+        snippetlvec2df += "Class Vec2Df\n";
+        snippetlvec2df += "<---->Field x:Float\n";
+        snippetlvec2df += "<---->Field y:Float\n";
+        snippetlvec2df += "\n";
+        snippetlvec2df += "<---->Method New(x:Float = 0, y:Float = 0)\n";
+        snippetlvec2df += "<----....>Set(x, y)\n";
+        snippetlvec2df += "<---->End\n";
+        snippetlvec2df += "<---->Method Set:Void(x:Float, y:Float)\n";
+        snippetlvec2df += "<----....>Self.x = x\n";
+        snippetlvec2df += "<----....>Self.y = y\n";
+        snippetlvec2df += "<---->End\n";
+        snippetlvec2df += "End";
+
+        QString snippetlvec2di;
+        snippetlvec2di += "Class Vec2Di\n";
+        snippetlvec2di += "<---->Field x:Int\n";
+        snippetlvec2di += "<---->Field y:Int\n";
+        snippetlvec2di += "\n";
+        snippetlvec2di += "<---->Method New(x:Int = 0, y:Int = 0)\n";
+        snippetlvec2di += "<----....>Set(x, y)\n";
+        snippetlvec2di += "<---->End\n";
+        snippetlvec2di += "<---->Method Set:Void(x:Int, y:Int)\n";
+        snippetlvec2di += "<----....>Self.x = x\n";
+        snippetlvec2di += "<----....>Self.y = y\n";
+        snippetlvec2di += "<---->End\n";
+        snippetlvec2di += "End";
+
         sFrom = new QStringList;
         sTo = new QStringList;
-        sFrom->append("#");
-        sTo->append(":Float");
-        sFrom->append("$");
-        sTo->append(":String");
-        sFrom->append("%");
-        sTo->append(":Int");
-        sFrom->append("?");
-        sTo->append(":Bool");
-        sFrom->append("/*");
-        sTo->append("#Rem");
-        sFrom->append("*/");
-        sTo->append("#End");
+//        sFrom->append("#");
+//        sTo->append(":Float");
+//        sFrom->append("$");
+//        sTo->append(":String");
+//        sFrom->append("%");
+//        sTo->append(":Int");
+//        sFrom->append("?");
+//        sTo->append(":Bool");
+//        sFrom->append("/*");
+//        sTo->append("#Rem");
+//        sFrom->append("*/");
+//        sTo->append("#End");
         sFrom->append("@mojoapp");
         sTo->append(snippetmojox);
         sFrom->append("@m");
