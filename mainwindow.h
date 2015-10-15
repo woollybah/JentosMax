@@ -81,6 +81,8 @@ private:
     QString getPlatform();
     QString getArchitecture();
 
+    void cleanupDebug();
+
 protected:
 
     void showEvent(QShowEvent * event);
@@ -213,7 +215,7 @@ private slots:
     void onTextChanged();
     void onCursorPositionChanged();
     void onShowCode(const QString &path, int line , bool error=false);
-    void onShowDebugCode(const QString &path, int line);
+    void onShowDebugCode(const QString &path, int line, bool toFront);
     void onShowCode( const QString &path,int pos,int len );
 
     void onProcStdout();

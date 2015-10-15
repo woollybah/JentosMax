@@ -33,13 +33,13 @@ public:
     bool canFetchMore( const QModelIndex &parent )const;
     void fetchMore( const QModelIndex &parent );
 
-    void showFileLine(const QString &file);
+    void showFileLine(const QString &file, bool toFront);
 
 public slots:
     void onClicked( const QModelIndex &index );
 
 signals:
-    void showDebugCode( const QString &path,int line );
+    void showDebugCode( const QString &path,int line, bool toFront );
 
 private:
     Process *_proc;

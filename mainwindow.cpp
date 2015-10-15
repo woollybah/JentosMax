@@ -1639,16 +1639,26 @@ void MainWindow::onShowCode( const QString &path, int line, bool error ){
     }
 }
 
-void MainWindow::onShowDebugCode( const QString &path, int line ){
-    //qDebug()<<"onShowCode";
-    if( CodeEditor *editor=qobject_cast<CodeEditor*>( openFile( path,true ) ) ){
-        //
+void MainWindow::onShowDebugCode( const QString &path, int line, bool toFront ){
 
-        editor->gotoLine( line );
-        editor->highlightLine( line, CodeEditor::HlCommon );
+    CodeEditor * editor;
+
+    if (!toFront) {
+        editor = editorWithPath( path );
+    } else {
+        editor = qobject_cast<CodeEditor*>(openFile( path,true ));
+    }
+
+    if (editor){
+        if (toFront) {
+            editor->gotoLine( line );
+            editor->highlightLine( line, CodeEditor::HlCommon );
+        }
         editor->setDebugLocation(line);
         //
-        if( editor==_codeEditor ) editor->setFocus( Qt::OtherFocusReason );
+        if ((editor==_codeEditor) && toFront) {
+            editor->setFocus( Qt::OtherFocusReason );
+        }
     }
 }
 
@@ -1839,7 +1849,7 @@ void MainWindow::onProcStderr(){
             raise();
 
             _debugTreeModel=new DebugTreeModel( _consoleProc );
-            connect( _debugTreeModel,SIGNAL(showDebugCode(QString,int)),SLOT(onShowDebugCode(QString,int)) );
+            connect( _debugTreeModel,SIGNAL(showDebugCode(QString,int,bool)),SLOT(onShowDebugCode(QString,int,bool)) );
 
             _ui->debugTreeView->setModel( _debugTreeModel );
             connect( _ui->debugTreeView,SIGNAL(clicked(const QModelIndex&)),_debugTreeModel,SLOT(onClicked(const QModelIndex&)) );
@@ -1885,12 +1895,7 @@ void MainWindow::onProcFinished(){
         _debugTreeModel=0;
 
         // tidy up debug indicators
-        for (int i=0; i < _mainTabWidget->count(); ++i) {
-            CodeEditor * editor = qobject_cast<CodeEditor*>( _mainTabWidget->widget( i ) );
-            if (editor) {
-                editor->setDebugLocation(-1);
-            }
-        }
+        cleanupDebug();
     }
 
     if( _consoleProc ){
@@ -1901,6 +1906,15 @@ void MainWindow::onProcFinished(){
     updateActions();
 
     statusBar()->showMessage( tr("Ready.") );
+}
+
+void MainWindow::cleanupDebug() {
+    for (int i=0; i < _mainTabWidget->count(); ++i) {
+        CodeEditor * editor = qobject_cast<CodeEditor*>( _mainTabWidget->widget( i ) );
+        if (editor) {
+            editor->setDebugLocation(-1);
+        }
+    }
 }
 
 void MainWindow::build( QString mode, QString pathmonkey){
@@ -2362,6 +2376,7 @@ void MainWindow::onBuildBuild(){
 
 void MainWindow::onBuildRun(){
     if( _debugTreeModel ){
+        cleanupDebug();
         _debugTreeModel->run();
     }else{
         build( "run","run" );
@@ -2378,16 +2393,19 @@ void MainWindow::onBuildUpdate(){
 
 void MainWindow::onDebugStep(){
     if( !_debugTreeModel ) return;
+    cleanupDebug();
     _debugTreeModel->step();
 }
 
 void MainWindow::onDebugStepInto(){
     if( !_debugTreeModel ) return;
+    cleanupDebug();
     _debugTreeModel->stepInto();
 }
 
 void MainWindow::onDebugStepOut(){
     if( !_debugTreeModel ) return;
+    cleanupDebug();
     _debugTreeModel->stepOut();
 }
 

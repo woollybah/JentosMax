@@ -130,6 +130,7 @@ void DebugTreeModel::stop(QString & line){
             // set function file offset
             if (func) {
                 func->setInfo(file);
+                showFileLine(file, false);
             }
 
             continue;
@@ -145,6 +146,7 @@ void DebugTreeModel::stop(QString & line){
             }
 
             func->update(text, file);
+            showFileLine(file, false);
 
         } else if (func) {
             DebugItem *item = dynamic_cast<DebugItem*>(func->child(n_vars++));
@@ -209,7 +211,7 @@ void DebugTreeModel::stop(QString & line){
     }
 
 
-    showFileLine( file );
+    showFileLine( file, true );
 }
 
 void DebugTreeModel::run(){
@@ -248,7 +250,7 @@ void DebugTreeModel::onClicked( const QModelIndex &index ){
     if( !item ) return;
 
     if( item->type()==DEBUG_FUNC ){
-        showFileLine(item->info());
+        showFileLine(item->info(), true);
 /*        QString info=item->info();
         int i=info.lastIndexOf( '<' );
         if( i!=-1 && info.endsWith( '>' ) ){
@@ -260,14 +262,14 @@ void DebugTreeModel::onClicked( const QModelIndex &index ){
     }
 }
 
-void DebugTreeModel::showFileLine(const QString &file) {
+void DebugTreeModel::showFileLine(const QString &file, bool toFront) {
     QString info=file;
     int i=info.lastIndexOf( '<' );
     if( i!=-1 && info.endsWith( '>' ) ){
         int n = info.indexOf(',', i);
         QString path=info.left( i );
         int line=info.mid( i+1,n - i - 1 ).toInt()-1;
-        emit showDebugCode( path,line );
+        emit showDebugCode( path,line, toFront );
     }
 }
 
