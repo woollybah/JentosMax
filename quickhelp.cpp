@@ -12,18 +12,72 @@ QuickHelp::QuickHelp(QObject *parent) :
     QObject(parent)
 {
     isKeyword = isGlobal = false;
-    topic = ltopic = url = kind = module = descr = classs = descrForInsert = "";
+    _topic = ltopic = url = kind = module = descr = clazz = descrForInsert = "";
 }
 
 QuickHelp::~QuickHelp(){
 }
 
 
-bool QuickHelp::init( QString &monkeyPath ) {
+bool QuickHelp::init( QString &maxPath ) {
 
     map()->clear();
     map2()->clear();
 
+
+    QFile commands(maxPath + "/docs/html/Modules/commands.txt");
+
+    if (!commands.exists()) {
+        return false;
+    }
+
+    if (commands.open(QIODevice::ReadOnly)) {
+        QTextStream stream(&commands);
+        while (!stream.atEnd()) {
+            QString line = stream.readLine();
+
+
+
+            int index = line.indexOf("|");
+
+            QString left;
+            QString url;
+
+            if (index >= 0) {
+                left = line.left(index);
+                url = line.mid(index + 1);
+            }
+
+            index = left.indexOf(" : ");
+
+            QString topic;
+            int i;
+
+            for (i=0; i < left.length(); i++) {
+                QChar c = left[i];
+                if (c == '_') continue;
+                if (c >= '0' && c <= '9') continue;
+                if (c >= 'a' && c <= 'z') continue;
+                if (c >= 'A' && c <= 'Z') continue;
+                break;
+            }
+            topic = left.left(i);
+
+            QString desc = left.mid(index + 3);
+
+            QuickHelp * h = new QuickHelp();
+            h->_topic = topic;
+            h->sig = left.left(index);
+            h->url = "file:///" + maxPath + url;
+            h->descr = desc;
+            h->isGlobal = false;
+            insert( h );
+
+       }
+       commands.close();
+    }
+
+/*
     QString text, line, topic, url, kind, module, descr, classs, tmp, paramsLine;
     QStringList lines;
     QuickHelp *h;
@@ -56,14 +110,15 @@ bool QuickHelp::init( QString &monkeyPath ) {
     for( int i = 0 ; i < lines.size() ; ++i ){
         topic = lines.at(i);
         h = new QuickHelp();
-        h->topic = topic;
+        h->_topic = topic;
         h->descr = topic;
         h->descrForInsert = topic;
         h->kind = "keyword";
         h->isKeyword = true;
         if( topic=="Include"||topic=="Import"||topic=="Module"||topic=="Extern"||
                 topic=="New"||topic=="Eachin"||
-                topic=="Extends"||/*topic=="Abstract"||topic=="Final"||*/topic=="Select"||topic=="Case"||
+                topic=="Extends"||//topic=="Abstract"||topic=="Final"||
+                topic=="Select"||topic=="Case"||
                 topic=="Const"||topic=="Local"||topic=="Global"||topic=="Field"||topic=="Method"||topic=="Function"||topic=="Type"||topic=="Interface"||topic=="Implements"||
                 topic=="And"||topic=="Or"||
                 topic=="Until"||topic=="For"||topic=="To"||topic=="Step"||
@@ -98,7 +153,7 @@ bool QuickHelp::init( QString &monkeyPath ) {
                 continue;
             }
             h = new QuickHelp();
-            h->topic = topic;
+            h->_topic = topic;
             h->url = url;
             h->isGlobal = false;
             insert( h );
@@ -193,7 +248,7 @@ bool QuickHelp::init( QString &monkeyPath ) {
             }
         }
 
-        h->topic = topic;
+        h->_topic = topic;
         h->url = "file:///"+monkeyPath+"/docs/html/"+url;
         h->descr = descr;
         h->kind = kind.toLower();
@@ -208,12 +263,13 @@ bool QuickHelp::init( QString &monkeyPath ) {
         insert( h );
 
     }
+    */
 
     return true;
 }
 
 void QuickHelp::insert(QuickHelp *help ) {
-    help->ltopic = help->topic.toLower();
+    help->ltopic = help->_topic.toLower();
     map()->insert( help->ltopic, help );
     map2()->insert( help->descr, help );
 }
@@ -228,31 +284,35 @@ QuickHelp* QuickHelp::help2( const QString &descr ) {
 
 QMap<QString,QuickHelp*>* QuickHelp::map() {
     static QMap<QString, QuickHelp*> *m;
-    if( !m )
+    if (!m) {
         m = new QMap<QString,QuickHelp*>;
+    }
     return m;
 }
 
 QMap<QString,QuickHelp*>* QuickHelp::map2() {
     static QMap<QString, QuickHelp*> *m;
-    if( !m )
+    if (!m) {
         m = new QMap<QString,QuickHelp*>;
+    }
     return m;
 }
 
 QString QuickHelp::quick() {
-    QString mod = (module.isEmpty() || topic == module ? "" : module+" > ");
-    QString cl = (classs.isEmpty() ? "" : classs+" > ");
-    return mod + cl + "(" + kind + ") " + descr;
+    QString mod = sig;//(module.isEmpty() || _topic == module ? "" : module+" > ");
+    QString cl = (clazz.isEmpty() ? "" : clazz+" > ");
+    return mod + " : " + descr;
 }
 
 QString QuickHelp::hint() {
-    QString mod = (module.isEmpty() || topic == module ? "" : module);
-    QString cl = (classs.isEmpty() ? "" : classs);
+    QString mod = sig;//(module.isEmpty() || _topic == module ? "" : module);
+    QString cl = (clazz.isEmpty() ? "" : clazz);
     QString s = "(" + kind + ") <b>" + descr+"</b>";
-    if( mod != "" )
+    if( mod != "" ) {
         s += "\n<i>Declared in:</i> "+mod;
-    if( cl != "" )
+    }
+    if( cl != "" ) {
         s += " > "+cl;
+    }
     return s;
 }

@@ -23,15 +23,16 @@ public:
     QuickHelp(QObject *parent = 0);
     ~QuickHelp();
 
-    QString topic, ltopic, url, kind, module, descr, classs, descrForInsert;
+    QString _topic, ltopic, url, kind, module, descr, clazz, descrForInsert;
+    QString sig;
     bool isGlobal, isKeyword;
     QString quick();
     QString hint();
     QStringList params;
 
     //------------
-    static bool init(QString &monkeyPath );
-    static QuickHelp* help( const QString &topic );
+    static bool init(QString &maxPath );
+    static QuickHelp* help( const QString &_topic );
     static QuickHelp* help2( const QString &descr );
     static QMap<QString, QuickHelp*>* map();
     static QMap<QString, QuickHelp*>* map2();//keys are descr

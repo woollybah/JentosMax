@@ -828,7 +828,7 @@ int CodeEditor::lineNumberAreaWidth() {
         ++digits;
     }
 
-    int space = 44 + fontMetrics().width(QLatin1Char('9')) * digits;
+    int space = 36 + fontMetrics().width(QLatin1Char('9')) * digits;
 
     return space;
 }
@@ -1148,6 +1148,9 @@ void CodeEditor::lineNumberAreaPaintEvent(QPaintEvent *event) {
     int i = 0;
     int debugLocation = _lineNumberArea->debugLocation();
     int dl = (bheight - imgDebug.height()) / 2;
+
+    QTextCursor cursor = textCursor();
+    int currentLine = cursor.block().blockNumber() + 1;
     //
     while (block.isValid() && i < n) {
         //
@@ -1180,7 +1183,11 @@ void CodeEditor::lineNumberAreaPaintEvent(QPaintEvent *event) {
         if( !bkmrk && !inher ) {
             int num = block.blockNumber() + 1 ;
             QString number = QString::number(num);
-            painter.setPen(QColor(130,130,130));
+            if (currentLine != num) {
+                painter.setPen(QColor(130,130,130));
+            } else {
+                painter.setPen(QColor(65,65,65));
+            }
             painter.drawText(0, py, wd, hg, Qt::AlignRight, number);
         }
         if( data && data->modified() > 0 ) {

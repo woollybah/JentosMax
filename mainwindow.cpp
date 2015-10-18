@@ -118,7 +118,12 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow( parent ),_ui( new Ui::Mai
 #ifdef Q_OS_WIN
     _targetsWidget->setCurrentIndex(0);
 #elif defined (Q_OS_LINUX)
-    _targetsWidget->setCurrentIndex(1);
+    // on Raspberry Pi?
+    if (QSysInfo::buildCpuArchitecture() == "arm") {
+        _targetsWidget->setCurrentIndex(3);
+    } else {
+        _targetsWidget->setCurrentIndex(1);
+    }
 #else // OS X
     _targetsWidget->setCurrentIndex(2);
 #endif
@@ -150,17 +155,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow( parent ),_ui( new Ui::Mai
     _indexWidget->setEditable( true );
     _indexWidget->setInsertPolicy( QComboBox::NoInsert );
     _ui->helpToolBar->addWidget( _indexWidget );
-
-    //
-    /*w = new QWidget;
-    w->setFixedWidth(3);
-    _ui->codeToolBar->addWidget(w);
-    QProgressBar *_progressBar = new QProgressBar(_ui->codeToolBar);
-    _progressBar->setFixedWidth(80);
-    _progressBar->setMaximum(100);
-    _progressBar->setValue(40);
-    _progressBar->setTextVisible(false);
-    _ui->codeToolBar->addWidget(_progressBar);*/
 
     //init central tab widget
     _mainTabWidget = new TabWidgetDrop;
@@ -298,6 +292,16 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow( parent ),_ui( new Ui::Mai
     _usagesPopupMenu->addAction(_ui->actionUsagesUnselectAll);
 
     connect( _ui->actionFileQuit,SIGNAL(triggered()),SLOT(onFileQuit()) );
+
+    _helpBack = new HelpButtonLabel(Theme::icon("Back.png").pixmap(24, 24), 0);
+    _ui->helpButtonsLayout->addWidget(_helpBack);
+    connect(_helpBack, SIGNAL(clicked()), this, SLOT( onHelpBack() ) );
+
+    _helpForward = new HelpButtonLabel(Theme::icon("Forward.png").pixmap(24, 24), 0);
+    _ui->helpButtonsLayout->addWidget(_helpForward);
+    connect(_helpForward, SIGNAL(clicked()), this, SLOT( onHelpForward() ) );
+
+    connect( _ui->webView,SIGNAL(loadFinished(bool)),SLOT(onLoadFinished(bool)) );
 
     readSettings();
 
@@ -449,9 +453,21 @@ void MainWindow::showEvent(QShowEvent * /*event*/) {
     QApplication::processEvents(); // show the splash screen immediately
 
     bool isValid = isValidBlitzMaxPath(_blitzMaxPath);
+    bool makeDocs = false;
 
     if( isValid ) {
         initKeywords();
+
+        // check docs
+        QFile docs(_blitzMaxPath + "/docs/html/User Guide/index.html");
+        if (!docs.exists()) {
+            QDir path(_blitzMaxPath);
+            path.mkpath(_blitzMaxPath + "/docs/html");
+            QFile index(_blitzMaxPath + "/docs/html/index.html");
+            index.open(QIODevice::WriteOnly);
+            index.close();
+            makeDocs = true;
+        }
     }
 
     QSettings *set = Prefs::settings();
@@ -481,8 +497,17 @@ void MainWindow::showEvent(QShowEvent * /*event*/) {
     splash->finish(this);
 
     if( !isValid ) {
-        QMessageBox::warning( this, APP_NAME, "Cannot determine BlitzMax path!\n\nPlease select correct path from the 'File -- Options' dialog." );
+        QMessageBox::warning( this, APP_NAME, tr("Cannot determine BlitzMax path!\n\nPlease select correct path from the 'File -- Options' dialog.") );
         onFilePrefs();
+    }
+
+    if (makeDocs) {
+        int res = QMessageBox::question(this, APP_NAME, tr("Documentation not found.\n\nWould you like to rebuild documentation now?") );
+        if (res == QMessageBox::Yes) {
+            onHelpRebuild();
+        }
+    } else {
+        onHelpHome();
     }
 
     Prefs *p = Prefs::prefs();
@@ -553,6 +578,9 @@ void MainWindow::updateTheme() {
     _ui->actionGoBack->setIcon(Theme::icon("Back.png"));
     _ui->actionGoForward->setIcon(Theme::icon("Forward.png"));
     //
+    _helpBack->setPixmap(Theme::icon("Back.png").pixmap(24, 24));
+    _helpForward->setPixmap(Theme::icon("Forward.png").pixmap(24, 24));
+    //
     _ui->actionToggleBookmark->setIcon(Theme::icon("Bookmark.png"));
     _ui->actionFoldAll->setIcon(Theme::icon("Fold.png"));
     _ui->actionUnfoldAll->setIcon(Theme::icon("Unfold.png"));
@@ -608,7 +636,7 @@ void MainWindow::initKeywords(){
     QMap<QString, QuickHelp*>::iterator i;
     for( i = QuickHelp::map()->begin() ; i != QuickHelp::map()->end() ; ++i ){
         if( i.value()->isGlobal || i.value()->isKeyword ) {
-            _indexWidget->addItem( i.value()->topic );
+            _indexWidget->addItem( i.value()->_topic );
             //Highlighter::keywordsAdd( i.value()->topic );
         }
     }
@@ -773,8 +801,11 @@ QWidget *MainWindow::openFile( const QString &cpath,bool addToRecent ){
     if( isUrl( cpath ) ){
         if(_isShowHelpInDock) {
             _ui->webView->page()->setLinkDelegationPolicy( QWebPage::DelegateAllLinks );
-            _ui->webView->setUrl( cpath );
+            _ui->webView->load(QUrl(cpath));
             _ui->docsDockWidget->setVisible(true);
+
+            //updateActions();
+
             return 0;
         }
         else {
@@ -787,16 +818,18 @@ QWidget *MainWindow::openFile( const QString &cpath,bool addToRecent ){
                 webView = new QWebView;
                 webView->page()->setLinkDelegationPolicy( QWebPage::DelegateAllLinks );
                 connect( webView,SIGNAL(linkClicked(QUrl)),SLOT(onLinkClicked(QUrl)) );
+                connect( webView,SIGNAL(loadFinished(bool)),SLOT(onLoadFinished(bool)) );
                 _mainTabWidget->addTab( webView,"Help" );
             }
 
-            webView->setUrl( cpath );
+            webView->load(QUrl(cpath));
 
             if( webView != _mainTabWidget->currentWidget() ){
                 _mainTabWidget->setCurrentWidget( webView );
             }else{
                 updateWindowTitle();
             }
+
             return webView;
         }
     }
@@ -1038,42 +1071,6 @@ bool MainWindow::isValidBlitzMaxPath(QString &path ){
     return false;
 }
 
-void MainWindow::enumTargets(){
-    if( _blitzMaxPath.isEmpty() ) return;
-
-    QString cmd="\""+_blitzMaxPath+"/bin/"+_transPath+"\"";
-
-    Process proc;
-    if( !proc.start( cmd ) ) return;
-
-    QString target = _targetsWidget->currentText();
-    _targetsWidget->clear();
-
-    QString sol = "Valid targets: ";
-    QString ver = "TRANS monkey compiler V";
-    int index = -1;
-    while( proc.waitLineAvailable( 0 ) ){
-        QString line=proc.readLine( 0 );
-        if( line.startsWith( ver ) ){
-            _transVersion = line.mid( ver.length() );
-        }else if( line.startsWith( sol ) ){
-            line=line.mid( sol.length() );
-            QStringList bits=line.split( ' ' );
-            for( int i=0;i<bits.count();++i ){
-                QString bit=bits[i];
-                if( !bit.isEmpty() ) {
-                    QString t = bit.replace( '_',' ' );
-                    _targetsWidget->addItem( t );
-                    if(t == target)
-                        index = _targetsWidget->count()-1;
-                }
-            }
-        }
-    }
-    if(index >= 0)
-        _targetsWidget->setCurrentIndex(index);
-}
-
 void MainWindow::readSettings(){
 
     QSettings *set = Prefs::settings();
@@ -1094,10 +1091,8 @@ void MainWindow::readSettings(){
     _isShowHelpInDock = prefs->getBool("showHelpInDock");
 
     _blitzMaxPath = prefs->getString( "blitzMaxPath" );
-    //_transPath = prefs->getString( "transPath" );
 
     onHelpHome();
-    //enumTargets();
 
     set->beginGroup( "mainWindow" );
     restoreGeometry( set->value( "geometry" ).toByteArray() );
@@ -1184,10 +1179,13 @@ void MainWindow::writeSettings(){
     set->beginWriteArray( "openDocuments" );
     int n=0;
     for( int i=0;i<_mainTabWidget->count();++i ){
-        QString path = widgetPath( _mainTabWidget->widget( i ) );
-        if( path.isEmpty() ) continue;
-        set->setArrayIndex( n++ );
-        set->setValue( "path",path );
+        // don't remember help
+        if (_helpWidget != _mainTabWidget->widget( i )) {
+            QString path = widgetPath( _mainTabWidget->widget( i ) );
+            if( path.isEmpty() ) continue;
+            set->setArrayIndex( n++ );
+            set->setValue( "path",path );
+        }
     }
     set->endArray();
 
@@ -1242,8 +1240,18 @@ void MainWindow::updateActions(){
     _ui->actionEditUndo->setEnabled( wr && _codeEditor->document()->isUndoAvailable() );
     _ui->actionEditRedo->setEnabled( wr && _codeEditor->document()->isRedoAvailable() );
 
-    _ui->actionGoBack->setEnabled( wr && _codeEditor->document()->isUndoAvailable() );
-    _ui->actionGoForward->setEnabled( wr && _codeEditor->document()->isRedoAvailable() );
+    if (_helpWidget && _helpWidget == _mainTabWidget->currentWidget()) {
+        _ui->actionGoBack->setEnabled(_helpWidget->history()->canGoBack());
+        _ui->actionGoForward->setEnabled(_helpWidget->history()->canGoForward());
+    } else {
+        _ui->actionGoBack->setEnabled( wr && _codeEditor->document()->isUndoAvailable() );
+        _ui->actionGoForward->setEnabled( wr && _codeEditor->document()->isRedoAvailable() );
+
+        if (_isShowHelpInDock) {
+            _helpBack->setEnabled(_ui->webView->history()->canGoBack());
+            _helpForward->setEnabled(_ui->webView->history()->canGoForward());
+        }
+    }
 
     _ui->actionEditCut->setEnabled( wr && sel );
     _ui->actionEditCopy->setEnabled( sel );
@@ -2172,8 +2180,9 @@ void MainWindow::onFilePrefs(){
         //enumTargets();
         initKeywords();
 
-        if(!_codeEditor)
+        if(!_codeEditor) {
             onHelpHome();
+        }
     }
 
     _isShowHelpInDock = Prefs::prefs()->getBool("showHelpInDock");
@@ -2492,26 +2501,37 @@ void MainWindow::onSwitchFullscreen() {
 
 void MainWindow::onHelpHome(){
 
-    QString htmlDocs=_blitzMaxPath+"/docs/html/Home.html";
+    QString htmlDocs=_blitzMaxPath+"/docs/html/index.html";
 
     if( QFile::exists( htmlDocs ) ){
+        _home = true;
         openFile( "file:///"+htmlDocs,false );
-    }else {
-        htmlDocs = "qrc:/txt/home.html";
-        openFile( htmlDocs,false );
-    }
+    }//else {
+     //   htmlDocs = "qrc:/txt/home.html";
+     //   openFile( htmlDocs,false );
+    //}
 }
 
 void MainWindow::onHelpBack(){
-    if( !_helpWidget ) return;
+    if (_isShowHelpInDock) {
+        _ui->webView->back();
+    } else {
+        if( !_helpWidget ) return;
 
-    _helpWidget->back();
+        _helpWidget->back();
+    }
+    updateActions();
 }
 
 void MainWindow::onHelpForward(){
-    if( !_helpWidget ) return;
+    if (_isShowHelpInDock) {
+       _ui->webView->forward();
+    } else {
+        if( !_helpWidget ) return;
 
-    _helpWidget->forward();
+        _helpWidget->forward();
+    }
+    updateActions();
 }
 
 void MainWindow::onHelpQuickHelp(){
@@ -2523,7 +2543,7 @@ void MainWindow::onHelpQuickHelp(){
     QuickHelp *h = QuickHelp::help( ident );
     if( !h )
         return;
-    ident = h->topic;
+    ident = h->_topic;
     QString url = h->url;
     QTextCursor cursor( _codeEditor->document() );
     int pos = cursor.position();
@@ -2531,7 +2551,7 @@ void MainWindow::onHelpQuickHelp(){
         openFile(url,false);
     }
     else {
-        statusBar()->showMessage("Help: "+h->quick());// code->descrAsItem());
+        statusBar()->showMessage(h->quick());// code->descrAsItem());
     }
     _lastHelpIdent = ident;
     _lastHelpCursorPos = pos;
@@ -2540,7 +2560,7 @@ void MainWindow::onHelpQuickHelp(){
 void MainWindow::onHelpAbout(){
     QString href = "https://github.com/woollybah/JentosMax";
     QString APP_ABOUT = "<html><head><style>a{color:#CC8030;}</style></head><body bgcolor2='#ff3355'><b>"APP_NAME"</b> is a code editor for BlitzMax.<br>"
-            "Based on Ted V"TED_VERSION" and Jentos IDE.<br> Please report issues at <a href='https://github.com/woollybah/JentosMax/issues'>GitHub>/a>.<br>"
+            "Based on Ted V"TED_VERSION" and Jentos IDE.<br> Please report issues at <a href='https://github.com/woollybah/JentosMax/issues'>GitHub</a>.<br>"
             "Visit <a href='"+href+"'>"+href+"</a> for more information.<br><br>"
             "Version: "APP_VERSION+"<br><br>Qt: "_STRINGIZE(QT_VERSION)+"<br><br>"
             "</body></html>";
@@ -2563,7 +2583,6 @@ void MainWindow::onHelpBlitzMaxHomepage() {
 }
 
 void MainWindow::onLinkClicked( const QUrl &url ){
-
     QString str=url.toString();
     QString lstr=str.toLower();
 
@@ -2588,22 +2607,33 @@ void MainWindow::onLinkClicked( const QUrl &url ){
     QDesktopServices::openUrl( str );
 }
 
+void MainWindow::onLoadFinished(bool ok) {
+    if (_isShowHelpInDock) {
+        if (_home) {
+            _ui->webView->history()->clear();
+            _home = false;
+        }
+    }
+    updateActions();
+}
+
 void MainWindow::onHelpRebuild(){
     if( _consoleProc || _blitzMaxPath.isEmpty() ) return;
 
     onFileSaveAll();
 
-    QString cmd="\"${MONKEYPATH}/bin/makedocs"+HOST+"\"";
+    QString cmd=_blitzMaxPath + "/bin/makedocs";
 
     runCommand( cmd,0, "" );
 
     initKeywords();
 
-    for( int i=0;i<_mainTabWidget->count();++i ){
-        QWebView *webView=qobject_cast<QWebView*>( _mainTabWidget->widget( i ) );
+    onHelpHome();
+//    for( int i=0;i<_mainTabWidget->count();++i ){
+//        QWebView *webView=qobject_cast<QWebView*>( _mainTabWidget->widget( i ) );
 
-        if( webView ) webView->triggerPageAction( QWebPage::ReloadAndBypassCache );
-    }
+//        if( webView ) webView->triggerPageAction( QWebPage::ReloadAndBypassCache );
+//    }
 }
 
 void MainWindow::onStatusBarChanged(const QString &text) {
@@ -2641,6 +2671,11 @@ void MainWindow::onUnfoldAll() {
 }
 
 void MainWindow::onGoBack() {
+    if (_helpWidget && _helpWidget == _mainTabWidget->currentWidget()) {
+        onHelpBack();
+        return;
+    }
+
     if( !_codeEditor ) return;
 
     _codeEditor->undo();
@@ -2651,6 +2686,11 @@ void MainWindow::onGoBack() {
 }
 
 void MainWindow::onGoForward() {
+    if (_helpWidget && _helpWidget == _mainTabWidget->currentWidget()) {
+        onHelpForward();
+        return;
+    }
+
     if( !_codeEditor ) return;
 
     _codeEditor->redo();
@@ -2741,12 +2781,9 @@ void MainWindow::onNetworkFinished(QNetworkReply *reply) {
 
 void MainWindow::onOpenUrl() {
     QString url;
-    if(sender() == _ui->actionHelpOnlineDocs)
-        url = "http://www.monkey-x.com/docs/html/Home.html";
-    else if(sender() == _ui->actionHelpMonkeyHomepage)
-        url = "http://www.monkey-x.com/";
-    else if(sender() == _ui->actionHelpFingerDevStudioHomepage)
-        url = "http://fingerdev.com/";
+    if (sender() == _ui->actionHelpBlitzMaxHomepage) {
+        url = "http://www.blitzmax.com/";
+    }
     QDesktopServices::openUrl(url);
 }
 
@@ -2947,4 +2984,17 @@ QString MainWindow::getArchitecture() {
     }
 
     return arch;
+}
+
+HelpButtonLabel::HelpButtonLabel( const QPixmap & pix, QWidget * parent ) : QLabel(parent) {
+    setPixmap(pix);
+    setMaximumSize(QSize(24, 24));
+    setScaledContents(true);
+    setDisabled(true);
+
+    //connect( this, SIGNAL( clicked() ), this, SLOT( slotClicked() ) );
+}
+
+void HelpButtonLabel::mouseReleaseEvent ( QMouseEvent * event ) {
+    emit clicked();
 }

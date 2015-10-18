@@ -637,9 +637,7 @@
     <addaction name="separator"/>
     <addaction name="actionHelpRebuild"/>
     <addaction name="separator"/>
-    <addaction name="actionHelpOnlineDocs"/>
-    <addaction name="actionHelpMonkeyHomepage"/>
-    <addaction name="actionHelpFingerDevStudioHomepage"/>
+    <addaction name="actionHelpBlitzMaxHomepage"/>
     <addaction name="separator"/>
     <addaction name="actionHelpCheck_for_Updates"/>
     <addaction name="actionHelpAbout"/>
@@ -1186,7 +1184,7 @@ Don't change documents between find usages and rename</string>
       <widget class="QWebView" name="webView">
        <property name="url">
         <url>
-         <string>file:///home/luis/Desarrollo/MonkeyX/monkey-83a/docs/html/Home.html</string>
+         <string>about:blank</string>
         </url>
        </property>
        <property name="zoomFactor">
@@ -1218,6 +1216,9 @@ Don't change documents between find usages and rename</string>
         <property name="bottomMargin">
          <number>0</number>
         </property>
+        <item>
+         <layout class="QHBoxLayout" name="helpButtonsLayout"/>
+        </item>
         <item>
          <spacer name="horizontalSpacer_3">
           <property name="orientation">
@@ -1846,12 +1847,12 @@ Don't change documents between find usages and rename</string>
     <string>http://monkey-x.com/docs/html/Home.html</string>
    </property>
   </action>
-  <action name="actionHelpMonkeyHomepage">
+  <action name="actionHelpBlitzMaxHomepage">
    <property name="text">
-    <string>Monkey Homepage</string>
+    <string>BlitzMax Homepage</string>
    </property>
    <property name="toolTip">
-    <string>http://monkey-x.com</string>
+    <string>http://blitzmax.com</string>
    </property>
   </action>
   <action name="actionEditFindPrevious">
@@ -3387,7 +3388,7 @@ Don't change documents between find usages and rename</string>
    </hints>
   </connection>
   <connection>
-   <sender>actionHelpMonkeyHomepage</sender>
+   <sender>actionHelpBlitzMaxHomepage</sender>
    <signal>triggered()</signal>
    <receiver>MainWindow</receiver>
    <slot>onOpenUrl()</slot>

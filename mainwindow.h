@@ -19,7 +19,7 @@ class FindDialog;
 class Process;
 class FindInFilesDialog;
 class QuickHelp;
-
+class HelpButtonLabel;
 
 namespace Ui {
 class MainWindow;
@@ -59,8 +59,6 @@ private:
     QWidget *openFile( const QString &path,bool addToRecent );
     bool saveFile( QWidget *widget,const QString &path );
     bool closeFile( QWidget *widget,bool remove=true );
-
-    void enumTargets();
 
     void readSettings();
     void writeSettings();
@@ -193,6 +191,7 @@ public slots:
 
     void onLinkClicked( const QUrl &url );
     void onDocsZoomChanged(int);
+    void onLoadFinished(bool ok);
 
 private slots:
 
@@ -303,7 +302,9 @@ private:
     QString _lastHelpIdent;
     int _lastHelpCursorPos;
 
-
+    HelpButtonLabel * _helpBack;
+    HelpButtonLabel * _helpForward;
+    bool _home;
 };
 
 // default font size on OS X is too big. We'll use a smaller size instead :-)
@@ -317,6 +318,19 @@ public:
         }
     }
 #endif
+};
+
+class HelpButtonLabel : public QLabel {
+    Q_OBJECT
+public:
+    HelpButtonLabel( const QPixmap & pix, QWidget * parent = 0 );
+    ~HelpButtonLabel(){}
+
+    signals:
+        void clicked();
+
+    protected:
+        void mouseReleaseEvent ( QMouseEvent * event ) ;
 };
 
 #endif // MAINWINDOW_H
