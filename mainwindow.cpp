@@ -79,7 +79,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow( parent ),_ui( new Ui::Mai
     QSettings::setDefaultFormat( QSettings::IniFormat );
 #endif
     QCoreApplication::setOrganizationName( "Fans of BlitzMax" );
-    QCoreApplication::setOrganizationDomain( "blitzmax.com" );
+    QCoreApplication::setOrganizationDomain( "brucey.net" );
     QCoreApplication::setApplicationName( APP_NAME );
 
     _ui->setupUi( this );
