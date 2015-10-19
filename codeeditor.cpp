@@ -1283,20 +1283,25 @@ void CodeEditor::mouseMoveEvent(QMouseEvent *e) {
         QTextCursor cursor = cursorForPosition(e->pos());
         cursor.select(QTextCursor::WordUnderCursor);
         //flushExtraSels();
-        QTextBlock block = cursor.block();
-        if( block.isValid() ){
-            QTextEdit::ExtraSelection selection;
-            selection.format.setForeground( (Theme::isDark() ? QColor(250,250,250) : QColor(0,0,255)) );
-            selection.format.setFontUnderline( true );
-            selection.format.setFontWeight( QFont::Bold );
-            selection.cursor = cursor;
-            extraSels.append( selection );
-        }
-        setExtraSelections( extraSels );
-        extraSelsEditor = this;
         QString word = cursor.selectedText();
 
         if( !word.isEmpty() ) {
+            QTextBlock block = cursor.block();
+            if( block.isValid() ){
+                CodeEditor::Link link;
+                link.linkTextStart = cursor.selectionStart();
+                link.linkTextEnd = cursor.selectionEnd();
+
+                showLink(link);
+//                QTextEdit::ExtraSelection selection;
+//                selection.format.setForeground( (Theme::isDark() ? QColor(250,250,250) : QColor(0,0,255)) );
+//                selection.format.setFontUnderline( true );
+//                selection.format.setFontWeight( QFont::Bold );
+//                selection.cursor = cursor;
+//                extraSels.append( selection );
+            }
+            //flushWordsExtraSels();
+
             QString tip = "";
             if(_scope.ident == word) {
                 tip = _scope.toolTip;
@@ -1310,14 +1315,15 @@ void CodeEditor::mouseMoveEvent(QMouseEvent *e) {
             }
 
             cursor.setPosition(cursor.selectionEnd());
-            setTextCursor(cursor);
+            //setTextCursor(cursor);
 
             CodeItem *item = CodeAnalyzer::itemKeyword(word);
             if(!item) {
                 item = CodeAnalyzer::findInScope(cursor.block(), cursor.positionInBlock(), 0, true);
             }
-            if(item)
+            if(item) {
                 tip = CodeAnalyzer::toolTip(item);
+            }
             if(!tip.isEmpty()) {
                 showToolTip(e->globalPos(), tip);
             }
@@ -1330,9 +1336,41 @@ void CodeEditor::mouseMoveEvent(QMouseEvent *e) {
         }
         return;
     }
+    clearLink();
     QToolTip::hideText();
     QPlainTextEdit::mouseMoveEvent(e);
 
+}
+
+void CodeEditor::showLink(const CodeEditor::Link &link) {
+    if (_currentLink == link) {
+        return;
+    }
+
+    flushWordsExtraSels();
+
+    QTextEdit::ExtraSelection selection;
+    selection.format.setForeground( (Theme::isDark() ? QColor(250,250,250) : QColor(0,0,255)) );
+    selection.format.setFontUnderline( true );
+    selection.format.setFontWeight( QFont::Bold );
+    selection.cursor = textCursor();
+    selection.cursor.setPosition(link.linkTextStart);
+    selection.cursor.setPosition(link.linkTextEnd, QTextCursor::KeepAnchor);
+
+    extraSels.append( selection );
+
+    _currentLink = link;
+
+    setExtraSelections( extraSels );
+    extraSelsEditor = this;
+
+}
+
+void CodeEditor::clearLink() {
+    Link link;
+    _currentLink = link;
+
+    flushWordsExtraSels();
 }
 
 void CodeEditor::resizeEvent(QResizeEvent *e) {
@@ -2172,9 +2210,12 @@ void CodeEditor::onPaste(const QString &text) {
     s = list.at(0);
     i = 0;
     n = s.length();
-    while( i < n && s[i] <= ' ' ) ++i;
-    if(i)
+    if (cursor.positionInBlock() == 0 || list.size() > 1) {
+        while( i < n && s[i] <= ' ' ) ++i;
+    }
+    if(i) {
         s = s.right(n-i);
+    }
     clip = s;
     for(int k = 1, size = list.size(); k < size; ++k) {
         s = list.at(k);

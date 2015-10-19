@@ -146,6 +146,35 @@ protected:
         QGuiApplication::restoreOverrideCursor();
     }
 
+    struct Link {
+            Link(const QString &fileName = QString(), int line = 0, int column = 0)
+                : linkTextStart(-1)
+                , linkTextEnd(-1)
+                , targetFileName(fileName)
+                , targetLine(line)
+                , targetColumn(column)
+            {}
+
+            bool hasValidTarget() const
+            { return !targetFileName.isEmpty(); }
+
+            bool hasValidLinkText() const
+            { return linkTextStart != linkTextEnd; }
+
+            bool operator==(const Link &other) const
+            { return linkTextStart == other.linkTextStart && linkTextEnd == other.linkTextEnd; }
+
+            int linkTextStart;
+            int linkTextEnd;
+
+            QString targetFileName;
+            int targetLine;
+            int targetColumn;
+    };
+
+    void showLink(const CodeEditor::Link &link);
+    void clearLink();
+
 private:
 
     void showToolTip(QPoint pos, QString s, bool nowrap=true);
@@ -170,6 +199,8 @@ private:
     int _editPosIndex;
 
     bool _isHighlightLine, _isHighlightWord;
+
+    Link _currentLink;
 
     friend class Highlighter;
 };
@@ -356,6 +387,5 @@ private:
 
     int _debugLocation;
 };
-
 
 #endif // CODEEDITOR_H
