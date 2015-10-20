@@ -1797,31 +1797,16 @@ void MainWindow::runCommand( QString cmd, QWidget *fileWidget, QString message )
 
 void MainWindow::onProcStdout(){
 
-    static QString comerr = " : Error : ";
-    static QString runerr = "Monkey Runtime Error : ";
+    static QString runtimeError = "Monkey Runtime Error : ";
 
     QString text = _consoleProc->readLine( 0 );
 
-    bool iscomerr = text.contains( comerr );
-    bool isrunerr = text.startsWith( runerr );
+    bool isRuntimeError = text.startsWith( runtimeError );
 
-    print( text, (iscomerr||isrunerr ? "error" : "") );
+    print( text, (isRuntimeError ? "error" : "") );
 
-    if(iscomerr){
-        int i0=text.indexOf( comerr );
-        QString info=text.left( i0 );
-        int i=info.lastIndexOf( '<' );
-        if( i!=-1 && info.endsWith( '>' ) ){
-            QString path=info.left( i );
-            int line=info.mid( i+1,info.length()-i-2 ).toInt()-1;
-            QString err=text.mid( i0+comerr.length() );
-
-            onShowCode( path,line );
-
-            QMessageBox::warning( this,"Compile Error",err );
-        }
-    }else if( isrunerr ){
-        QString err=text.mid( runerr.length() );
+    if( isRuntimeError ){
+        QString err=text.mid( runtimeError.length() );
 
         //not sure what this voodoo is for...!
         showNormal();
@@ -1833,11 +1818,44 @@ void MainWindow::onProcStdout(){
 
 void MainWindow::onProcStderr(){
 
+    static QString compileError = "Compile Error:";
+
+
+    QString text=_consoleProc->readLine( 1 );
+
+    bool isCompileError = text.startsWith( compileError );
+
+    if(isCompileError){
+        int i0=text.indexOf( compileError );
+        QString err=text.mid( i0 + compileError.length() );
+
+        print( text, "error" );
+
+        // read the error line info
+        text = _consoleProc->readLine( 1 );
+
+        int i=text.indexOf( '[' );
+        if( i!=-1 && text.endsWith( ']' ) ){
+            QString info=text.mid(1, text.length() - 2);
+            QStringList parts = info.split(";");
+
+            QString path = parts.at(0);
+            int line=parts.at(1).toInt()-1;
+
+            onShowCode( path,line );
+
+            print( text, "error" );
+
+            QMessageBox::warning( this,"Compile Error",err );
+
+            return;
+        }
+    }
+
+
     if( _debugTreeModel && _debugTreeModel->stopped() ) {
         return;
     }
-
-    QString text=_consoleProc->readLine( 1 );
 
     if ( text.startsWith( "~>" )) {
 
