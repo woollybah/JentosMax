@@ -277,7 +277,7 @@ void CodeAnalyzer::loadKeywords( const QString &path ) {
             "Const;Local;Global;Field;Method;Function;Type;Interface;Implements;"
             "And;Or;Shl;Shr;End;If;Then;Else;Elseif;Endif;While;Wend;Repeat;Until;Forever;For;To;Step;Next;Return;"
             "Try;Catch;Throw;"
-            "Rem;DebugLog;DebugStop;";
+            "Rem;DebugLog;DebugStop;Incbin;IncbinPtr;VarPtr;";
     }
     QStringList lines = text.split(';');
     QTextBlock block;
