@@ -252,6 +252,8 @@ private:
     void setTextFormat(int start, int end, Formats format, bool italic=false);
     bool _enabled;
     friend class BlockData;
+public:
+    bool _refreshDocument;
 };
 
 

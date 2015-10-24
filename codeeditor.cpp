@@ -2074,6 +2074,11 @@ if(Prefs::prefs()->getBool("AutoBracket")==true){
         }
     }
 
+    if (_highlighter->_refreshDocument) {
+        _highlighter->_refreshDocument = false;
+        _highlighter->rehighlight();
+    }
+
 }
 
 bool CodeEditor::findNext( const QString &findText,bool cased,bool wrap,bool backward ){
@@ -2258,6 +2263,7 @@ Highlighter::Highlighter( CodeEditor *editor ):QSyntaxHighlighter( editor->docum
     connect( Prefs::prefs(),SIGNAL(prefsChanged(const QString&)),SLOT(onPrefsChanged(const QString&)) );
     _enabled = true;
     onPrefsChanged( "" );
+    _refreshDocument = false;
 
 }
 
@@ -2304,6 +2310,17 @@ void Highlighter::highlightBlock( const QString &ctext ){
         setTextFormat(0, ctext.length(), FormatComment);
         if (text.startsWith("end rem", Qt::CaseInsensitive) || text.startsWith("endrem", Qt::CaseInsensitive)) {
             setCurrentBlockState(0);
+            // we also need to clear out following lines which would now not be inside a rem block
+
+            QTextBlock block = currentBlock();
+            block = block.next();
+
+            while (block.isValid() && block.userState() == 1) {
+                block.setUserState(0);
+                _refreshDocument = true;
+                block = block.next();
+            }
+
         } else {
             // still in the Rem block...
             setCurrentBlockState(1);
