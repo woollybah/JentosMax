@@ -65,7 +65,7 @@ void CodeAnalyzer::init() {
         p->setValue("codeSort",true);
     }
     if (!p->contains("codeAutoformat")) {
-        p->setValue("codeAutoformat",true);
+        p->setValue("codeAutoformat",false);
     }
     if (!p->contains("codeFillAucompInherit")) {
         p->setValue("codeFillAucompInherit",true);
