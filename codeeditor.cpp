@@ -2053,7 +2053,12 @@ if(Prefs::prefs()->getBool("AutoBracket")==true){
         }
         else if( (key >= Qt::Key_A && key <= Qt::Key_Z) || (key >= Qt::Key_0 && key <= Qt::Key_9) || key == Qt::Key_Backspace ) {
             if(key != Qt::Key_Backspace || !_lcomp->isForInheritance()) {
-                aucompShowList( false );
+                QString ident = identAtCursor(false);
+                if(ident.length() > 2) {
+                    aucompShowList( false );
+                } else {
+                    onCompleteFocusOut();
+                }
             }
             e->accept();
             return;
@@ -2322,10 +2327,24 @@ void Highlighter::highlightBlock( const QString &ctext ){
             }
 
         } else {
-            // still in the Rem block...
+             // still in the Rem block...
             setCurrentBlockState(1);
         }
         return;
+    } else {
+        QTextBlock block = currentBlock();
+
+        if (block.isValid() && block.userState() == 1) {
+            if (!text.startsWith("rem", Qt::CaseInsensitive)) {
+                while (block.isValid() && block.userState() == 1) {
+                    block.setUserState(0);
+                    _refreshDocument = true;
+                    block = block.next();
+                }
+            }
+        }
+
+
     }
 
     if (text.isEmpty()) {
