@@ -23,11 +23,14 @@ void Prefs::setValue( const QString &name,const QVariant &value ){
     }
 }
 
-QSettings* Prefs::settings() {
+QSettings* Prefs::settings(QString path) {
     static QSettings *s = 0;
     if(!s) {
-        //s = new QSettings(QApplication::applicationDirPath()+"/settings.ini",QSettings::IniFormat);
-        s = new QSettings();
+        if (!path.isEmpty()) {
+            s = new QSettings(path, QSettings::IniFormat);
+        } else {
+            s = new QSettings();
+        }
         //qDebug()<<"settings.filename:"<<s->fileName();
     }
     return s;

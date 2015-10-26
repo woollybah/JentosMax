@@ -60,6 +60,7 @@ private:
     bool saveFile( QWidget *widget,const QString &path );
     bool closeFile( QWidget *widget,bool remove=true );
 
+    void initSettings();
     void readSettings();
     void writeSettings();
 

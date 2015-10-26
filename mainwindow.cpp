@@ -84,6 +84,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow( parent ),_ui( new Ui::Mai
 
     _ui->setupUi( this );
 
+    initSettings();
+
     CodeAnalyzer::init();
     Theme::init();
 
@@ -1071,6 +1073,37 @@ bool MainWindow::isValidBlitzMaxPath(QString &path ){
     return false;
 }
 
+void MainWindow::initSettings() {
+    QString settingsPath = "";
+
+    // check local app dir/cfg
+    QFile settings(QApplication::applicationDirPath() + "/cfg");
+
+    if (settings.exists()) {
+        settingsPath = QApplication::applicationDirPath() + "/cfg/jm.ini";
+        _blitzMaxPath = QApplication::applicationDirPath();
+    } else {
+        // no cfg here? Look up global prefs to find it.
+        QSettings settings;
+
+        settings.beginGroup( "userPrefs" );
+        QString v = (settings.contains("blitzMaxPath") ? settings.value( "blitzMaxPath").toString() : "");
+        settings.endGroup();
+
+        if (!v.isEmpty()) {
+            settingsPath = v + "/cfg/jm.ini";
+            _blitzMaxPath = v;
+        }
+    }
+
+    Prefs::settings(settingsPath);
+
+    if (!_blitzMaxPath.isEmpty()) {
+        Prefs *prefs = Prefs::prefs();
+         prefs->setValue( "blitzMaxPath", _blitzMaxPath );
+    }
+}
+
 void MainWindow::readSettings(){
 
     QSettings *set = Prefs::settings();
@@ -1078,11 +1111,11 @@ void MainWindow::readSettings(){
 
     //some default values
     if(!prefs->contains("updates")) {
-        prefs->setValue("updates",true);
+        prefs->setValue("updates",false);
         prefs->setValue("tabSize",4);
         prefs->setValue("fontSize",12);
         prefs->setValue("highlightLine",true);
-        prefs->setValue("highlightWord",true);
+        prefs->setValue("highlightWord",false);
         prefs->setValue("style","Default");
         prefs->setValue("showHelpInDock",false);
         prefs->setValue("replaceDocsStyle",true);
@@ -1205,6 +1238,13 @@ void MainWindow::writeSettings(){
     set->endGroup();
 
     set->setValue( "defaultDir",_defaultDir );
+
+    if (!_blitzMaxPath.isEmpty()) {
+        QSettings settings;
+        settings.beginGroup( "userPrefs" );
+        settings.setValue( "blitzMaxPath",_blitzMaxPath );
+        settings.endGroup();
+    }
 }
 
 //Actions...
@@ -1729,9 +1769,9 @@ void MainWindow::onCodeTreeViewClicked( const QModelIndex &index ) {
 }
 
 void MainWindow::onSourceListViewClicked( const QModelIndex &index ) {
-    if(_codeEditor)
+    if(_codeEditor) {
         _codeEditor->onSourceListViewClicked(index);
-    //qDebug()<<"onSourceListViewClicked";
+    }
 }
 
 //Console...
@@ -1763,12 +1803,6 @@ void MainWindow::cdebug( const QString &str ){
 }
 
 void MainWindow::runCommand( QString cmd, QWidget *fileWidget, QString message ){
-
-    //cmd=cmd.replace( "${TARGET}",_targetsWidget->currentText().replace( ' ','_' ) );
-    //cmd=cmd.replace( "${CONFIG}",_configsWidget->currentText() );
-    //cmd=cmd.replace( "${MONKEYPATH}",_blitzMaxPath );
-    //cmd=cmd.replace( "${BLITZMAXPATH}",_blitzmaxPath );
-    //if( fileWidget ) cmd=cmd.replace( "${FILEPATH}",widgetPath( fileWidget ) );
 
     _consoleProc = new Process;
 
@@ -1861,15 +1895,6 @@ void MainWindow::onProcStderr(){
 
         QString info=text.mid( 2 );
 
-/*        int i=info.lastIndexOf( '<' );
-        if( i!=-1 && info.endsWith( '>' ) ){
-            QString path=info.left( i );
-            int line=info.mid( i+1,info.length()-i-2 ).toInt()-1;
-            onShowCode( path,line );
-        }else{
-            print( info, "error" );
-        }
-*/
         if( !_debugTreeModel ){
 
             raise();
@@ -1882,7 +1907,6 @@ void MainWindow::onProcStderr(){
 
             _ui->debugDockWidget->setVisible(true);
 
-            //print( "STOPPED", "error" );
         }
 
         _debugTreeModel->stop(info);
@@ -1939,6 +1963,7 @@ void MainWindow::cleanupDebug() {
         CodeEditor * editor = qobject_cast<CodeEditor*>( _mainTabWidget->widget( i ) );
         if (editor) {
             editor->setDebugLocation(-1);
+            editor->update();
         }
     }
 }

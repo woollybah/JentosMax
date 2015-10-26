@@ -58,7 +58,7 @@ public:
     void blockEmitPrefsChanged(bool value, bool emitNow=false);
 
     static Prefs *prefs();
-    static QSettings *settings();
+    static QSettings *settings(QString path = "");
 
 signals:
 
