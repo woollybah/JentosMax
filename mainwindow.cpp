@@ -1076,12 +1076,27 @@ bool MainWindow::isValidBlitzMaxPath(QString &path ){
 void MainWindow::initSettings() {
     QString settingsPath = "";
 
-    // check local app dir/cfg
-    QFile settings(QApplication::applicationDirPath() + "/cfg");
+    QString maxPath = blitzMaxPath("");
+    bool hasMaxPath = !maxPath.isEmpty();
 
-    if (settings.exists()) {
-        settingsPath = QApplication::applicationDirPath() + "/cfg/jm.ini";
-        _blitzMaxPath = QApplication::applicationDirPath();
+    if (maxPath.isEmpty()) {
+        maxPath = QApplication::applicationDirPath();
+    }
+
+    // check local app dir/cfg
+    QDir configDir(maxPath);
+
+    // we are in a BlitzMax dir but no config dir yet?
+    if (hasMaxPath && !configDir.exists("cfg")) {
+        // make it !
+        configDir.mkdir("cfg");
+    }
+
+    configDir = maxPath + "/cfg";
+
+    if (configDir.exists()) {
+        settingsPath = maxPath + "/cfg/jm.ini";
+        _blitzMaxPath = maxPath;
     } else {
         // no cfg here? Look up global prefs to find it.
         QSettings settings;
@@ -1369,8 +1384,8 @@ void MainWindow::onChangeAnalyzerProperties(bool) {
 void MainWindow::updateWindowTitle(){
     QWidget *widget=_mainTabWidget->currentWidget();
     if( CodeEditor *editor=qobject_cast<CodeEditor*>( widget ) ){
-        //setWindowTitle( editor->path() + " - "APP_NAME);
-         setWindowTitle( APP_NAME" v"APP_VERSION );
+        setWindowTitle( editor->path() + " - "APP_NAME" v"APP_VERSION);
+        // setWindowTitle( APP_NAME" v"APP_VERSION );
     }else if( QWebView *webView=qobject_cast<QWebView*>( widget ) ){
         //QString s = webView->url().toString();
        // s = s.mid(8,s.length());
@@ -1831,13 +1846,15 @@ void MainWindow::runCommand( QString cmd, QWidget *fileWidget, QString message )
 
 void MainWindow::onProcStdout(){
 
-    static QString runtimeError = "Monkey Runtime Error : ";
+    static QString runtimeError = "BlitzMax Runtime Error : ";
 
     QString text = _consoleProc->readLine( 0 );
 
     bool isRuntimeError = text.startsWith( runtimeError );
 
     print( text, (isRuntimeError ? "error" : "") );
+
+    qApp->processEvents();
 
     if( isRuntimeError ){
         QString err=text.mid( runtimeError.length() );
