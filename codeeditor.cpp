@@ -649,6 +649,7 @@ void CodeEditor::onCursorPositionChanged(){
     QTextCursor cursor = textCursor();
     if( cursor.isNull() )
         return;
+
     int row = cursor.blockNumber();
     //highlightLine( row, HlCaretRow );
     if( row != _storedBlockNumber ) {
@@ -1293,14 +1294,7 @@ void CodeEditor::mouseMoveEvent(QMouseEvent *e) {
                 link.linkTextEnd = cursor.selectionEnd();
 
                 showLink(link);
-//                QTextEdit::ExtraSelection selection;
-//                selection.format.setForeground( (Theme::isDark() ? QColor(250,250,250) : QColor(0,0,255)) );
-//                selection.format.setFontUnderline( true );
-//                selection.format.setFontWeight( QFont::Bold );
-//                selection.cursor = cursor;
-//                extraSels.append( selection );
             }
-            //flushWordsExtraSels();
 
             QString tip = "";
             if(_scope.ident == word) {
@@ -1600,7 +1594,6 @@ void CodeEditor::fillSourceListWidget(CodeItem *item, QStandardItem *si) {
 }
 
 void CodeEditor::keyPressEvent( QKeyEvent *e ) {
-
     int key = e->key();
     bool ctrl = (e->modifiers() & Qt::ControlModifier);
     bool shift = (e->modifiers() & Qt::ShiftModifier);
@@ -1869,20 +1862,6 @@ if(Prefs::prefs()->getBool("AutoBracket")==true){
             QString text = block.text();
             for( i = 0 ; i < cursor.positionInBlock() && text[i] <= ' ' ; ++i ){}
             QString spaces = text.left(i), s = "";
-            //if haven't text before cursor
-            /*
-            if(i == cursor.positionInBlock()) {
-                int d = i+1;
-                cursor.setPosition(cursor.position()-d);
-                setTextCursor(cursor);
-                insertPlainText("\n"+spaces);
-                cursor.setPosition(cursor.position()+d);
-                setTextCursor(cursor);
-                ensureCursorVisible();
-                e->accept();
-                return;
-            }
-            */
 
             text = text.trimmed().toLower();
             int deltaPos = 0;
@@ -1983,6 +1962,10 @@ if(Prefs::prefs()->getBool("AutoBracket")==true){
                     onCompleteFocusOut();
                 }
             }
+            cursor.deletePreviousChar();
+            setTextCursor(cursor);
+            e->accept();
+//            return;
         }
     }
 
@@ -2010,34 +1993,10 @@ if(Prefs::prefs()->getBool("AutoBracket")==true){
 
     bool listShown = aucompIsVisible();
 
-    if( e ) QPlainTextEdit::keyPressEvent( e );
+    if( e && (key != Qt::Key_Backspace) ) QPlainTextEdit::keyPressEvent( e );
 
     //auto ident for var = new ...
     if((key == ' ' && !ctrl && !shift) || checkNew) {
-        /*QString s = block.text().trimmed();//.replace(" ","");
-        if(s.endsWith("= New") || s.endsWith("=New")) {
-
-            int i = s.length()-6;
-            QChar c = s[i];
-            qDebug()<<"char:"<<c;
-            if(c != ':') {//not :=
-                s = s.left(i).trimmed();
-                qDebug()<<"s1:"<<s;
-                i = s.lastIndexOf(' ');
-                if(i) {
-                    s = s.mid(i+1);
-                    qDebug()<<"s2:"<<s;
-                    i = s.indexOf(':');
-                    if(i) {
-                        s = s.mid(i+1);
-                        qDebug()<<"s3:"<<s;
-
-                    }
-                }
-            }
-            e->accept();
-            return;
-        }*/
 
         //exit if we typed 'method ' and shown inherited methods
         if(!listShown && aucompIsVisible()) {
@@ -2062,7 +2021,9 @@ if(Prefs::prefs()->getBool("AutoBracket")==true){
                     onCompleteFocusOut();
                 }
             }
-            e->accept();
+            if (key != Qt::Key_Backspace) {
+                e->accept();
+            }
             return;
         }
         else if(key != 46) {
@@ -2085,7 +2046,6 @@ if(Prefs::prefs()->getBool("AutoBracket")==true){
         _highlighter->_refreshDocument = false;
         _highlighter->rehighlight();
     }
-
 }
 
 bool CodeEditor::findNext( const QString &findText,bool cased,bool wrap,bool backward ){
@@ -2122,18 +2082,6 @@ bool CodeEditor::findNext( const QString &findText,bool cased,bool wrap,bool bac
     }
 
     setCenterOnScroll( false );
-
-    /*if(found) {
-        QTextCursor cursor = textCursor();
-        qDebug()<<"cpib:"<<cursor.positionInBlock();
-        int len = findText.length();
-        int i = cursor.position()-len;
-        cursor.setPosition(i);
-        cursor.setPosition(i+len,QTextCursor::KeepAnchor);
-        setTextCursor(cursor);
-        document()->adjustSize();
-    }*/
-
 
     return found;
 }
