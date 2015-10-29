@@ -1870,6 +1870,7 @@ if(Prefs::prefs()->getBool("AutoBracket")==true){
             for( i = 0 ; i < cursor.positionInBlock() && text[i] <= ' ' ; ++i ){}
             QString spaces = text.left(i), s = "";
             //if haven't text before cursor
+            /*
             if(i == cursor.positionInBlock()) {
                 int d = i+1;
                 cursor.setPosition(cursor.position()-d);
@@ -1881,6 +1882,7 @@ if(Prefs::prefs()->getBool("AutoBracket")==true){
                 e->accept();
                 return;
             }
+            */
 
             text = text.trimmed().toLower();
             int deltaPos = 0;
